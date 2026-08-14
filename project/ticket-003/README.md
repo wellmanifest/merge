@@ -3,7 +3,7 @@
 - **ID**: ticket-003
 - **Owner**: unresolved:human
 - **Status**: IN_PROGRESS
-- **Workflow state**: EDIT
+- **Workflow state**: PUBLICATION
 - **Created**: 2026-08-14
 
 ## Goal and scope
@@ -21,14 +21,14 @@ dispatch may review or merge it.
 
 ## Acceptance criteria
 
-- [ ] AC-01: The document names `config/direct-pr-registry.json` as the only
+- [x] AC-01: The document names `config/direct-pr-registry.json` as the only
   repository membership, base and required-check policy source.
-- [ ] AC-02: The enablement and diagnosis procedures match the generated
+- [x] AC-02: The enablement and diagnosis procedures match the generated
   `plan-direct-scan` matrix, digest-bound runtime config and target ruleset.
-- [ ] AC-03: The document no longer lists already-onboarded repositories as
+- [x] AC-03: The document no longer lists already-onboarded repositories as
   missing, and no longer presents the deleted repository variable as runtime
   configuration.
-- [ ] AC-04: Dependency reads required by the fleet use short-lived Validator
+- [x] AC-04: Dependency reads required by the fleet use short-lived Validator
   App tokens; a legacy queue PAT failure is documented as isolated from the
   repository scan fan-out.
 - [ ] AC-05: A real `schedule` event finds this attributable PR, validates and

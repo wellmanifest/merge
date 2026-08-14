@@ -39,6 +39,13 @@ manual dispatch.
 - Initialized the bounded ticket and recorded SESSION_EXECUTION_AUTHORIZATION
   from the request to execute this work.
 - No implementation file has been changed before recording this plan.
+- Replaced the historical four-list contract with the deployed protected
+  registry, generated plan/runtime projection and digest check.
+- Updated enablement and diagnosis around repository-scoped App tokens,
+  standing policy variables and target rulesets.
+- Recorded that the legacy queue PAT is isolated from the scheduled fan-out.
+- The conformance suite and managed gate pass; the ticket remains
+  `IN_PROGRESS / PUBLICATION` until a real schedule event merges the canary PR.
 
 ## Blockers
 

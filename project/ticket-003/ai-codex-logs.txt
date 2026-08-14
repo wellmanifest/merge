@@ -1,3 +1,9 @@
 2026-08-14 allocator: project/new-ticket.sh created ticket-003 with workstream=integration; kind=BUG; priority=P1; origin=requested
 2026-08-14 authorization: SESSION_EXECUTION_AUTHORIZATION recorded from the user's autonomous execution request; no merge approval inferred
 2026-08-14 accepted base: 362c47fc2d1f13ecf1601860d934ee42ea4a6ac0
+2026-08-14 command: python3 standard/conformance.py --all
+exit: 0
+output: ok=true; positiveDocuments=4; adversarialRejected=24; envDslParityCases=10
+2026-08-14 command: ./project/governance-check.sh --actor agent
+exit: 0
+output: GOV-PASS: passed (0 errors, 0 warnings)

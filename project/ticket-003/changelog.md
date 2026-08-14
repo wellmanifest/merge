@@ -6,3 +6,5 @@
 - No human participant identity or content was generated.
 - Recorded the single-document runtime-contract correction and schedule-only
   canary publication plan.
+- Corrected the autonomous merge guide to the single protected registry,
+  digest-bound fan-out and queue PAT isolation deployed in validator-agent.
