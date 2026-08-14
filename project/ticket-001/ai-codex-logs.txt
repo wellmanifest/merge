@@ -5,3 +5,15 @@ output: {"ok":true,"positiveDocuments":4,"adversarialRejected":24,"envDslParityC
 exit: 0
 output: GOV-PASS: passed (0 errors, 0 warnings)
 2026-08-14 server settings: delete_branch_on_merge=true; ruleset=20870194; required_status_check=conformance; required_approvals=1; require_last_push_approval=true; bypass=[]
+2026-08-14 GitHub API: wellmanifest/merge PR #1 state=MERGED; head=b7f313f678cda4077415f9c50455b3e48548fb61; merge=14712eae437f8dee8d7295f87a692ee6a4585368; exact-head review=APPROVED by ifuri-validator-agent[bot]; conformance=SUCCESS
+2026-08-14 GitHub API: implementation branch refs/heads/ticket/001-autonomous-validator-publication returned 404; delete_branch_on_merge=true
+2026-08-14 GitHub API: ruleset 20870194 enforcement=active; bypass=[]; required_status_check=conformance; required_approvals=1; require_last_push_approval=true
+2026-08-14 GitHub API: subactor/validator-agent PR #56 state=MERGED; merge=12de44928d2bfd6a3ce34fde3871e1d9bc0178b0; wellmanifest/merge scheduled_scan=true; required_checks=[conformance]
+2026-08-14 command: git diff --check
+exit: 0
+2026-08-14 command: python3 standard/conformance.py --all
+exit: 0
+output: ok=true; positiveDocuments=4; adversarialRejected=24; envDslParityCases=10
+2026-08-14 command: ./project/governance-check.sh --actor agent
+exit: 0
+output: GOV-PASS: passed (0 errors, 0 warnings)

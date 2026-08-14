@@ -42,9 +42,16 @@ reviewer and does not authorize a direct merge.
   requires the exact `conformance` context, one fresh approving review after
   the last push, resolved review threads and merge commits with no bypass.
 - The managed governance gate passes with zero errors and zero warnings; the
-  ticket now remains `IN_PROGRESS / PUBLICATION` until trusted integration.
+  implementation remained `IN_PROGRESS / PUBLICATION` until trusted
+  integration.
+- The Validator App approved exact head
+  `b7f313f678cda4077415f9c50455b3e48548fb61`, and the protected process merged
+  it as `14712eae437f8dee8d7295f87a692ee6a4585368` after all required checks passed.
+- The server deleted the merged implementation branch and retains the active,
+  bypass-free ruleset that requires `conformance` and a fresh approval.
+- Validator-agent PR #56 enabled `wellmanifest/merge` in the protected dynamic
+  scheduled registry. The ticket can therefore close from integrated `main`.
 
 ## Blockers
 
-- None inside the recorded scope. External target settings are part of the
-  requested protected publication boundary, not a hand-back to the user.
+- None. All acceptance criteria have current repository or GitHub API evidence.
