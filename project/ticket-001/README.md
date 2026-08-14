@@ -3,7 +3,7 @@
 - **ID**: ticket-001
 - **Owner**: unresolved:human
 - **Status**: IN_PROGRESS
-- **Workflow state**: EDIT
+- **Workflow state**: PUBLICATION
 - **Created**: 2026-08-14
 
 ## Goal and scope
@@ -21,7 +21,7 @@ interactive agent must never approve or merge this work.
   revision `769183ca27593af1d166acee11bc9e37decf9870`.
 - [ ] AC-03: The existing deterministic conformance suite is a required hosted
   check named exactly `conformance`.
-- [ ] AC-04: The managed governance gate passes for this bounded ticket and
+- [x] AC-04: The managed governance gate passes for this bounded ticket and
   accepted base.
 - [ ] AC-05: The target ruleset requires `conformance` plus a fresh approving
   review, the Validator App approves and merges the exact head, and the ticket

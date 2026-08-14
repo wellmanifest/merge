@@ -38,6 +38,11 @@ reviewer and does not authorize a direct merge.
   `769183ca27593af1d166acee11bc9e37decf9870`.
 - Added one hosted `conformance` job that runs the existing standard suite and
   the managed governance gate with full base history.
+- Enabled `delete_branch_on_merge` and created active ruleset `20870194`, which
+  requires the exact `conformance` context, one fresh approving review after
+  the last push, resolved review threads and merge commits with no bypass.
+- The managed governance gate passes with zero errors and zero warnings; the
+  ticket now remains `IN_PROGRESS / PUBLICATION` until trusted integration.
 
 ## Blockers
 

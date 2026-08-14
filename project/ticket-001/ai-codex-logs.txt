@@ -1,3 +1,7 @@
 2026-08-14 command: python3 standard/conformance.py --all
 exit: 0
 output: {"ok":true,"positiveDocuments":4,"adversarialRejected":24,"envDslParityCases":10}
+2026-08-14 command: ./project/governance-check.sh --actor agent
+exit: 0
+output: GOV-PASS: passed (0 errors, 0 warnings)
+2026-08-14 server settings: delete_branch_on_merge=true; ruleset=20870194; required_status_check=conformance; required_approvals=1; require_last_push_approval=true; bypass=[]
