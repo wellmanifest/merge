@@ -1,0 +1,124 @@
+{
+  "schema": "new-project.intent/v3",
+  "ticket": "ticket-001",
+  "summary": "Enable autonomous Validator publication",
+  "workstream": "governance",
+  "classification": {
+    "kind": "FEATURE",
+    "priority": "P1",
+    "origin": "requested"
+  },
+  "allowedPaths": [
+    ".github/workflows/conformance.yml",
+    ".github/workflows/new-project-governance.yml",
+    ".governance/**",
+    "AGENTS.md",
+    "CHANGELOG.md",
+    "README.md",
+    "TODO.md",
+    "project.bat",
+    "project.sh",
+    "project/TICKETS.md",
+    "project/governance-check.bat",
+    "project/governance-check.sh",
+    "project/new-ticket.sh",
+    "project/readme.sh",
+    "project/ticket-001/**",
+    "scripts/runtime.sh"
+  ],
+  "forbiddenPaths": [
+    "project/ticket-*/user-*.md",
+    "standard/**",
+    "docs/**",
+    "VERSION"
+  ],
+  "stacks": [],
+  "dependsOn": [],
+  "conflictsWith": [],
+  "integrationTicket": null,
+  "delivery": {
+    "acceptedBaseSha": "0c030caaf89119b5f9a7635abd960e3308c6d73e",
+    "targetBranch": "main",
+    "outcome": "The merge standard has deterministic hosted conformance, pinned repository governance and a protected Validator App publication path that can approve, merge and delete its ticket branch without an interactive merge.",
+    "nonGoals": [
+      "Change merge-decision semantics or Env DSL equations",
+      "Let an interactive agent approve or merge its own pull request",
+      "Use a shared personal access token for target review or merge",
+      "Enable scheduled fleet scanning before the bootstrap path is proven"
+    ],
+    "complexity": "S",
+    "estimatedMinutes": 25,
+    "standardAdoption": {
+      "sourceRepository": "wellmanifest/new-project",
+      "fromRevision": null,
+      "toRevision": "769183ca27593af1d166acee11bc9e37decf9870"
+    },
+    "budgets": {
+      "maxImplementationFiles": 5,
+      "maxAffectedComponents": 2,
+      "maxPublicInterfaceChanges": 0,
+      "maxRuntimeDependencies": 0
+    },
+    "architecture": {
+      "status": "accepted",
+      "decision": "Adopt the immutable governance package, publish one dependency-free conformance job and require exact-head Validator App review before the server accepts a merge.",
+      "components": [
+        {
+          "name": "governance-package",
+          "paths": [
+            ".governance/**",
+            "AGENTS.md",
+            "project/**",
+            "project.bat",
+            "project.sh",
+            "scripts/runtime.sh"
+          ]
+        },
+        {
+          "name": "publication-boundary",
+          "paths": [
+            ".github/workflows/**",
+            "README.md",
+            "CHANGELOG.md",
+            "TODO.md"
+          ]
+        }
+      ],
+      "responsibilityChanges": false,
+      "interfaceChanges": [],
+      "dataChanges": [],
+      "ui": {
+        "impact": "none",
+        "states": [],
+        "evidence": []
+      },
+      "rollback": "Before protected publication, close the PR without merge and preserve its branch; after publication, revert through a new reviewed ticket without disabling the ruleset."
+    },
+    "runtimeDependencies": [],
+    "validation": [
+      {
+        "criterion": "AC-03",
+        "commands": [
+          "python3 standard/conformance.py --all"
+        ],
+        "evidence": "project/ticket-001/ai-codex-logs.txt"
+      },
+      {
+        "criterion": "AC-04",
+        "commands": [
+          "./project/governance-check.sh --actor agent"
+        ],
+        "evidence": "project/ticket-001/ai-codex-logs.txt"
+      },
+      {
+        "criterion": "AC-05",
+        "commands": [
+          "protected conformance check",
+          "exact-head Validator App review",
+          "server-side merge and branch deletion"
+        ],
+        "evidence": "GitHub pull request and ruleset state"
+      }
+    ]
+  }
+}
