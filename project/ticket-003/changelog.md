@@ -10,3 +10,6 @@
   digest-bound fan-out and queue PAT isolation deployed in validator-agent.
 - Reconciled a concurrent blocked branch through draft PR #7 so the remote
   lifecycle contract remains true without publishing ticket-004 prematurely.
+- Recorded the real scheduled fleet run, generated `wellmanifest/merge` leg,
+  exact-head App approval, explicit merge and branch deletion; closed the
+  ticket as `DONE / DONE` from integrated `main`.
