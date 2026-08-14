@@ -14,6 +14,26 @@
       "rejectionEvent": "merge.decision.rejected"
     },
     {
+      "code": "MRG-DECISION-001",
+      "documentation": "error/MRG-DECISION-001.md",
+      "retryability": "after-new-evidence",
+      "status": {
+        "http": 409,
+        "grpc": "FAILED_PRECONDITION"
+      },
+      "rejectionEvent": "merge.decision.rejected"
+    },
+    {
+      "code": "MRG-DOC-001",
+      "documentation": "error/MRG-DOC-001.md",
+      "retryability": "after-correction",
+      "status": {
+        "http": 422,
+        "grpc": "INVALID_ARGUMENT"
+      },
+      "rejectionEvent": "merge.decision.rejected"
+    },
+    {
       "code": "MRG-EVIDENCE-001",
       "documentation": "error/MRG-EVIDENCE-001.md",
       "retryability": "after-new-evidence",
@@ -24,12 +44,52 @@
       "rejectionEvent": "merge.decision.rejected"
     },
     {
-      "code": "MRG-DECISION-001",
-      "documentation": "error/MRG-DECISION-001.md",
+      "code": "MRG-MERGE-001",
+      "documentation": "error/MRG-MERGE-001.md",
       "retryability": "after-new-evidence",
       "status": {
-        "http": 409,
+        "http": 422,
         "grpc": "FAILED_PRECONDITION"
+      },
+      "rejectionEvent": "merge.decision.rejected"
+    },
+    {
+      "code": "MRG-RECEIPT-001",
+      "documentation": "error/MRG-RECEIPT-001.md",
+      "retryability": "after-correction",
+      "status": {
+        "http": 422,
+        "grpc": "INVALID_ARGUMENT"
+      },
+      "rejectionEvent": "merge.decision.rejected"
+    },
+    {
+      "code": "MRG-RECOVERY-001",
+      "documentation": "error/MRG-RECOVERY-001.md",
+      "retryability": "after-new-evidence",
+      "status": {
+        "http": 422,
+        "grpc": "FAILED_PRECONDITION"
+      },
+      "rejectionEvent": "merge.decision.rejected"
+    },
+    {
+      "code": "MRG-REF-001",
+      "documentation": "error/MRG-REF-001.md",
+      "retryability": "after-correction",
+      "status": {
+        "http": 422,
+        "grpc": "INVALID_ARGUMENT"
+      },
+      "rejectionEvent": "merge.decision.rejected"
+    },
+    {
+      "code": "MRG-SECRET-001",
+      "documentation": "error/MRG-SECRET-001.md",
+      "retryability": "after-correction",
+      "status": {
+        "http": 422,
+        "grpc": "INVALID_ARGUMENT"
       },
       "rejectionEvent": "merge.decision.rejected"
     }

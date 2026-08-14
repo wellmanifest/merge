@@ -8,6 +8,7 @@ must carry so the work it destroys can come back.
 from __future__ import annotations
 
 import argparse
+import ast
 import copy
 import hashlib
 import importlib.util
@@ -24,6 +25,7 @@ SCHEMA_PATH = ROOT / "merge-decision.schema.json"
 GRAMMAR_PATH = ROOT / "merge-decision.v1.gbnf"
 BINDINGS_PATH = ROOT / "tool-bindings.json"
 RULES_PATH = ROOT / "merge-rules.env"
+OPERATIONS_PATH = ROOT.parent / "operations" / "index.json"
 ENV_DSL_PATH = ROOT / "env_dsl.py"
 ENV_DSL_SOURCE_REVISION = "1d5ed6c"
 ENV_DSL_DIGEST = "5bf2e2b0983f9bbe421278a2eb76f485a5fee4c10cd820a19bfd5d1ac6e2dc24"
@@ -412,6 +414,60 @@ def dsl_admissible(
     return result
 
 
+# Which validator answers which command, and which diagnostics the shared
+# helpers raise on its behalf.
+_COMMAND_VALIDATORS = {
+    "validate_candidate": "merge.candidate.record",
+    "validate_evidence": "merge.evidence.observe",
+    "validate_decision": "merge.decision.record",
+    "validate_receipt": "merge.action.execute",
+}
+_HELPER_CODES = {
+    "closed": ("MRG-DOC-001",),
+    "match": ("MRG-REF-001",),
+    "refs": ("MRG-REF-001",),
+    "reject_sensitive": ("MRG-SECRET-001",),
+}
+
+
+def raisable_codes(function: ast.FunctionDef) -> set[str]:
+    """Read the diagnostics a validator can actually raise, from its own body."""
+    found: set[str] = set()
+    for node in ast.walk(function):
+        if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Name):
+            continue
+        if node.func.id == "ContractError" and node.args and isinstance(node.args[0], ast.Constant):
+            found.add(node.args[0].value)
+        found.update(_HELPER_CODES.get(node.func.id, ()))
+    return found
+
+
+def validate_rejection_surface() -> dict[str, list[str]]:
+    """A command must declare every diagnostic its own validation can raise.
+
+    Derived from this file rather than from a hand-kept list, because a
+    rejection surface maintained by hand drifts the moment a rule is added: the
+    command keeps refusing, and the catalogue stops saying so.
+    """
+    operations = json.loads(OPERATIONS_PATH.read_text())
+    declared = {command["id"]: set(command["rejects"]) for command in operations["commands"]}
+    tree = ast.parse(Path(__file__).read_text())
+    functions = {node.name: node for node in tree.body if isinstance(node, ast.FunctionDef)}
+    surface: dict[str, list[str]] = {}
+    for name, command in _COMMAND_VALIDATORS.items():
+        if name not in functions:
+            raise ContractError("MRG-CQRS-001", "a declared command has no validator")
+        actual = raisable_codes(functions[name])
+        if command not in declared:
+            raise ContractError("MRG-CQRS-001", "a validated command is absent from the registry")
+        if actual != declared[command]:
+            raise ContractError(
+                "MRG-CQRS-001", "a command's declared rejections differ from what it can raise"
+            )
+        surface[command] = sorted(actual)
+    return surface
+
+
 def expect_rejected(
     name: str, code: str, validator: Callable[[dict[str, Any]], Any],
     base: dict[str, Any], mutation: Callable[[dict[str, Any]], None],
@@ -535,6 +591,7 @@ def run_all() -> dict[str, Any]:
     if unbound:
         raise ContractError("MRG-EVIDENCE-001", "every evidence kind needs a producer binding")
 
+    rejection_surface = validate_rejection_surface()
     candidate, evidence, decision, receipt = sample()
     validate_candidate(candidate)
     validate_decision(decision, candidate, evidence)
@@ -670,6 +727,7 @@ def run_all() -> dict[str, Any]:
         "schema": "wellmanifest.merge-decision-conformance/v1",
         "ok": True,
         "positiveDocuments": 4,
+        "rejectionSurface": rejection_surface,
         "ruleProjection": {
             "document": "merge-rules.env",
             "language": "wellmanifest/env-dsl",

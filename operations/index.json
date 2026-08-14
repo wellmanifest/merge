@@ -56,7 +56,10 @@
         "merge.candidate.recorded"
       ],
       "rejects": [
-        "MRG-CANDIDATE-001"
+        "MRG-CANDIDATE-001",
+        "MRG-DOC-001",
+        "MRG-REF-001",
+        "MRG-SECRET-001"
       ]
     },
     {
@@ -72,7 +75,10 @@
         "merge.evidence.observed"
       ],
       "rejects": [
-        "MRG-EVIDENCE-001"
+        "MRG-DOC-001",
+        "MRG-EVIDENCE-001",
+        "MRG-REF-001",
+        "MRG-SECRET-001"
       ]
     },
     {
@@ -89,8 +95,13 @@
         "merge.decision.rejected"
       ],
       "rejects": [
+        "MRG-DECISION-001",
+        "MRG-DOC-001",
         "MRG-EVIDENCE-001",
-        "MRG-DECISION-001"
+        "MRG-MERGE-001",
+        "MRG-RECOVERY-001",
+        "MRG-REF-001",
+        "MRG-SECRET-001"
       ]
     },
     {
@@ -106,7 +117,11 @@
         "merge.action.executed"
       ],
       "rejects": [
-        "MRG-DECISION-001"
+        "MRG-DOC-001",
+        "MRG-RECEIPT-001",
+        "MRG-RECOVERY-001",
+        "MRG-REF-001",
+        "MRG-SECRET-001"
       ]
     }
   ],
