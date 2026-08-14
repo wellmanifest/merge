@@ -38,6 +38,10 @@ merged, a distinct integration ticket can own the reference contracts.
 - JSON, the exact ownership assertion, the governance gate and all merge
   conformance cases pass. The ticket remains `IN_PROGRESS / PUBLICATION` until
   independent exact-head review and protected merge.
+- Validator App approved exact head
+  `0be726e6899266c138a360d185acd5f0bcb5cca9`; the protected process merged it as
+  `dfca0c31a4171062f603400265888ca62ee27a12` and deleted the implementation
+  branch. This governance-only closure is based on integrated `main`.
 
 ## Blockers
 
