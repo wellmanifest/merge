@@ -52,12 +52,13 @@ checkout.
   became visible as PR #5.
 - PR #6 was closed without merge as soon as the same-workstream collision was
   discovered. The implementation branch and all commits remain preserved.
+- Observed the next real scheduled Validator run and verified that Validator
+  App merged ticket-003 PR #5 as `906000833031bf3afa589eb91e6907fd3ac19d63`.
+  The integration reservation is terminal, so ticket-004 resumed publication.
 
 ## Blockers
 
-- Ticket-003 is `IN_PROGRESS / PUBLICATION` in the same integration workstream
-  and must be merged or otherwise reach a terminal state first. Its AC-05
-  explicitly requires the next real `schedule` event, not a manual dispatch.
+- None inside the bounded CQRS publication scope; ticket-003 is integrated.
 - New authority remains required for destructive action, secret access, new
   external coordination or material objective expansion. Protected delivery
   may be invoked without another prompt when publication is in scope; its
