@@ -26,3 +26,6 @@ output: GOV-PASS; CQRS 9/9 adversarial rejected; merge 24/24 adversarial rejecte
 exit: 0
 output: All checks passed; diff contains 14 implementation files (limit 15)
 2026-08-14 baseline note: broad Ruff also reports pre-existing F841 standard/env_dsl.py:339 plus nonexistent requested roots tests and SKILLS; none is in ticket-004 diff or allowedPaths
+2026-08-14 GitHub API: PR #7 head=5b19cd9ad1e8ef125840cac911255f0f63ddf001; hosted governance and conformance=success
+2026-08-14 protected run: validator-agent 31842721768 conclusion=success; ifuri-validator-agent[bot] review=APPROVED commit_id=5b19cd9ad1e8ef125840cac911255f0f63ddf001
+2026-08-14 GitHub API: PR #7 mergedAt=2026-08-14T21:32:21Z mergeCommit=28de24d66d94b1773419f679a9d098a8372a8945; implementation branch deleted

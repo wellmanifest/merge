@@ -20,3 +20,5 @@
 - Resumed only after scheduled PR #5 and governance-only PR #8 made ticket-003
   terminal on integrated `main`; repeated governance, 9 CQRS mutations, 24
   merge mutations, focused Ruff and the 14-file budget check successfully.
+- Published exact head `5b19cd9…` through Validator App as merge `28de24d…`,
+  deleted the remote implementation branch and recorded this terminal closure.

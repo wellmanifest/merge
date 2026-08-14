@@ -60,11 +60,16 @@ checkout.
   closure releases the integration workstream.
 - Verified governance-only PR #8 merged as `1234674…`, integrated its exact
   `DONE / DONE` record, and resumed ticket-004 in `PUBLICATION` from that base.
+- Reused preserved draft PR #7, updated its exact head without force-push and
+  marked it ready only after ticket-003 became terminal.
+- Hosted governance and conformance passed on `5b19cd9…`; protected run
+  `31842721768` obtained exact-head Validator App approval and merged PR #7 as
+  `28de24d…`, with remote branch deletion.
+- Created this governance-only `DONE / DONE` closure from integrated `main`.
 
 ## Blockers
 
-- None inside the bounded CQRS scope; ticket-003 is terminal on integrated
-  `main` and the integration workstream is released.
+- None; the CQRS reference is integrated and the ticket is complete.
 - New authority remains required for destructive action, secret access, new
   external coordination or material objective expansion. Protected delivery
   may be invoked without another prompt when publication is in scope; its
