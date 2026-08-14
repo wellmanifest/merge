@@ -1,0 +1,81 @@
+{
+  "schema": "new-project.intent/v3",
+  "ticket": "ticket-003",
+  "summary": "Correct autonomous merge runtime contract",
+  "workstream": "integration",
+  "classification": {
+    "kind": "BUG",
+    "priority": "P1",
+    "origin": "requested"
+  },
+  "allowedPaths": [
+    "docs/AUTONOMOUS_MERGE.md",
+    "project/ticket-003/**",
+    "TODO.md",
+    "project/TICKETS.md"
+  ],
+  "forbiddenPaths": [
+    "project/ticket-*/user-*.md",
+    ".governance/**",
+    "operations/**",
+    "events/**",
+    "error/**",
+    "models/**",
+    "proto/**"
+  ],
+  "stacks": [],
+  "dependsOn": ["ticket-001"],
+  "conflictsWith": [],
+  "integrationTicket": null,
+  "delivery": {
+    "acceptedBaseSha": "362c47fc2d1f13ecf1601860d934ee42ea4a6ac0",
+    "targetBranch": "main",
+    "outcome": "Replace the obsolete four-list autonomous-merge description with the deployed single-registry, repository-scoped App and PAT-isolated runtime contract, then use this ticket PR as a schedule-only merge canary.",
+    "nonGoals": [
+      "Do not change merge rule semantics or Env DSL equations",
+      "Do not edit validator-agent from this target ticket",
+      "Do not use workflow_dispatch or an interactive merge for the canary PR",
+      "Do not absorb untracked drafts from another checkout"
+    ],
+    "complexity": "XS",
+    "estimatedMinutes": 10,
+    "budgets": {
+      "maxImplementationFiles": 1,
+      "maxAffectedComponents": 1,
+      "maxPublicInterfaceChanges": 0,
+      "maxRuntimeDependencies": 0
+    },
+    "architecture": {
+      "status": "accepted",
+      "decision": "Document the protected validator registry as the only repository membership and check-policy source, and require a real schedule event as publication evidence.",
+      "components": [
+        {
+          "name": "autonomous-merge-contract",
+          "paths": ["docs/AUTONOMOUS_MERGE.md"]
+        }
+      ],
+      "responsibilityChanges": false,
+      "interfaceChanges": [],
+      "dataChanges": [],
+      "ui": {
+        "impact": "none",
+        "states": [],
+        "evidence": []
+      },
+      "rollback": "Before merge, close the canary PR and retain its branch; after merge, restore the previous prose only through a new reviewed integration ticket."
+    },
+    "runtimeDependencies": [],
+    "validation": [
+      {
+        "criterion": "AC-04",
+        "commands": [
+          "python3 standard/conformance.py --all",
+          "./project/governance-check.sh --actor agent",
+          "gh run list --repo subactor/validator-agent --workflow validator.yml --event schedule",
+          "gh pr view --repo wellmanifest/merge"
+        ],
+        "evidence": "project/ticket-003/ai-codex-logs.txt"
+      }
+    ]
+  }
+}
