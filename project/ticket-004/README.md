@@ -2,8 +2,8 @@
 
 - **ID**: ticket-004
 - **Owner**: unresolved:human
-- **Status**: BLOCKED
-- **Workflow state**: BLOCKED
+- **Status**: IN_PROGRESS
+- **Workflow state**: PUBLICATION
 - **Created**: 2026-08-14
 
 ## Goal and scope
@@ -57,10 +57,11 @@ The implementation was preserved at
 `ca9e403ede3a430e4741f7f5889b1eba7babf08a` while the previously reserved
 ticket-003 owned the integration workstream. Its schedule-only canary PR #5
 was merged by Validator App as `906000833031bf3afa589eb91e6907fd3ac19d63`,
-but its integrated ticket record correctly remains `IN_PROGRESS / PUBLICATION`
-until a governance-only closure reaches `main`. Ticket-004 therefore stays
-parked until that closure releases the integration workstream. Closed,
-unmerged PR #6 remains historical evidence; its branch was correctly retained.
+and its governance-only PR #8 was then merged as
+`123467486af0d2a24fe359be58f154b6c7c75234`. The integrated ticket record is
+now `DONE / DONE`, so ticket-004 owns the released integration workstream and
+has updated from that exact base. Closed, unmerged PR #6 remains historical
+evidence; its branch was correctly retained and is now reused for a fresh PR.
 
 ## Participants
 

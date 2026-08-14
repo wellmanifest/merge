@@ -58,11 +58,13 @@ checkout.
   governance-only terminal closure: ticket-003 remains active on `main`.
   Aborted only the unresolved local merge and kept ticket-004 parked until the
   closure releases the integration workstream.
+- Verified governance-only PR #8 merged as `1234674…`, integrated its exact
+  `DONE / DONE` record, and resumed ticket-004 in `PUBLICATION` from that base.
 
 ## Blockers
 
-- Ticket-003 is integrated but still `IN_PROGRESS / PUBLICATION`; its required
-  governance-only `DONE / DONE` closure must reach `main` first.
+- None inside the bounded CQRS scope; ticket-003 is terminal on integrated
+  `main` and the integration workstream is released.
 - New authority remains required for destructive action, secret access, new
   external coordination or material objective expansion. Protected delivery
   may be invoked without another prompt when publication is in scope; its

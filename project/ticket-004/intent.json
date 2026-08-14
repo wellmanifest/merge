@@ -37,7 +37,7 @@
   "conflictsWith": [],
   "integrationTicket": null,
   "delivery": {
-    "acceptedBaseSha": "906000833031bf3afa589eb91e6907fd3ac19d63",
+    "acceptedBaseSha": "123467486af0d2a24fe359be58f154b6c7c75234",
     "targetBranch": "main",
     "outcome": "Publish a closed, dependency-free CQRS reference where operations/index.json is the sole C/Q source of truth and event/error catalogues are cross-reference checked projections.",
     "nonGoals": [
