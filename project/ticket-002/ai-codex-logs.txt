@@ -1,0 +1,14 @@
+2026-08-14 command: python3 -m json.tool .governance/manifest.json project/ticket-002/intent.json
+exit: 0
+output: PASS
+2026-08-14 command: exact CQRS namespace ownership assertion
+exit: 0
+output: PASS: CQRS namespaces are owned exactly by integration
+2026-08-14 command: git diff --check
+exit: 0
+2026-08-14 command: ./project/governance-check.sh --actor agent
+exit: 0
+output: GOV-PASS: passed (0 errors, 0 warnings)
+2026-08-14 command: python3 standard/conformance.py --all
+exit: 0
+output: ok=true; positiveDocuments=4; adversarialRejected=24; envDslParityCases=10

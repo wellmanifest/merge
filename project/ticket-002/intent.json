@@ -1,0 +1,83 @@
+{
+  "schema": "new-project.intent/v3",
+  "ticket": "ticket-002",
+  "summary": "Declare CQRS standard path ownership",
+  "workstream": "governance",
+  "classification": {
+    "kind": "FEATURE",
+    "priority": "P1",
+    "origin": "requested"
+  },
+  "allowedPaths": [
+    ".governance/manifest.json",
+    "project/ticket-002/**",
+    "TODO.md",
+    "project/TICKETS.md"
+  ],
+  "forbiddenPaths": [
+    "project/ticket-*/user-*.md",
+    ".governance/manifest.base.json",
+    ".governance/manifest.lock.json",
+    "operations/**",
+    "events/**",
+    "error/**",
+    "models/**",
+    "proto/**"
+  ],
+  "stacks": [],
+  "dependsOn": [],
+  "conflictsWith": [],
+  "integrationTicket": null,
+  "delivery": {
+    "acceptedBaseSha": "562994df6f2af1cf4dbeda2d6c6e6352e09e3420",
+    "targetBranch": "main",
+    "outcome": "Assign the CQRS contract namespaces to the integration workstream so a later ticket can publish one auditable reference skeleton.",
+    "nonGoals": [
+      "Do not create domain contracts in this governance prerequisite",
+      "Do not make absent files required",
+      "Do not edit the managed adoption base or lock",
+      "Do not absorb untracked drafts from another checkout"
+    ],
+    "complexity": "XS",
+    "estimatedMinutes": 10,
+    "budgets": {
+      "maxImplementationFiles": 1,
+      "maxAffectedComponents": 1,
+      "maxPublicInterfaceChanges": 0,
+      "maxRuntimeDependencies": 0
+    },
+    "architecture": {
+      "status": "accepted",
+      "decision": "Assign every CQRS domain-contract namespace to integration before any contract file is introduced.",
+      "components": [
+        {
+          "name": "coordination-manifest",
+          "paths": [
+            ".governance/manifest.json"
+          ]
+        }
+      ],
+      "responsibilityChanges": false,
+      "interfaceChanges": [],
+      "dataChanges": [],
+      "ui": {
+        "impact": "none",
+        "states": [],
+        "evidence": []
+      },
+      "rollback": "Before merge, revert the manifest entry; after merge, remove ownership only in a new reviewed governance ticket after all dependent integration work is retired."
+    },
+    "runtimeDependencies": [],
+    "validation": [
+      {
+        "criterion": "AC-03",
+        "commands": [
+          "python3 -m json.tool .governance/manifest.json",
+          "./project/governance-check.sh --actor agent",
+          "python3 standard/conformance.py --all"
+        ],
+        "evidence": "project/ticket-002/ai-codex-logs.txt"
+      }
+    ]
+  }
+}
