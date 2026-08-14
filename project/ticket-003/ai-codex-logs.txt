@@ -7,3 +7,5 @@ output: ok=true; positiveDocuments=4; adversarialRejected=24; envDslParityCases=
 2026-08-14 command: ./project/governance-check.sh --actor agent
 exit: 0
 output: GOV-PASS: passed (0 errors, 0 warnings)
+2026-08-14 hosted run 31838880430: governance / remote lifecycle=FAIL; public branch snapshot showed orphaned ticket/004-cqrs-contracts after PR #6 closed without merge
+2026-08-14 coordination: created wellmanifest/merge draft PR #7 for the retained ticket-004 branch at 8ab026437089ac7e3e0e3ffd21f45fa28f62f630; ticket remains BLOCKED and validator-agent skips isDraft=true

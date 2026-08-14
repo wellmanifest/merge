@@ -46,6 +46,10 @@ manual dispatch.
 - Recorded that the legacy queue PAT is isolated from the scheduled fan-out.
 - The conformance suite and managed gate pass; the ticket remains
   `IN_PROGRESS / PUBLICATION` until a real schedule event merges the canary PR.
+- The first hosted remote-lifecycle attempt exposed ticket-004's retained
+  branch after its implementation PR was closed. Without editing that ticket,
+  the branch was attached to draft PR #7; draft PRs preserve ownership while
+  validator-agent deterministically skips them.
 
 ## Blockers
 

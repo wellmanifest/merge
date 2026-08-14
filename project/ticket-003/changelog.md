@@ -8,3 +8,5 @@
   canary publication plan.
 - Corrected the autonomous merge guide to the single protected registry,
   digest-bound fan-out and queue PAT isolation deployed in validator-agent.
+- Reconciled a concurrent blocked branch through draft PR #7 so the remote
+  lifecycle contract remains true without publishing ticket-004 prematurely.
