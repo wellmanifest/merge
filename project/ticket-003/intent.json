@@ -67,7 +67,7 @@
     "runtimeDependencies": [],
     "validation": [
       {
-        "criterion": "AC-01..AC-05",
+        "criterion": "AC-04",
         "commands": [
           "python3 standard/conformance.py --all",
           "./project/governance-check.sh --actor agent",
