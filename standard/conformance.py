@@ -17,6 +17,8 @@ import sys
 from pathlib import Path
 from typing import Any, Callable
 
+import cqrs_conformance
+
 ROOT = Path(__file__).resolve().parent
 SCHEMA_PATH = ROOT / "merge-decision.schema.json"
 GRAMMAR_PATH = ROOT / "merge-decision.v1.gbnf"
@@ -361,7 +363,9 @@ def facts_for(
     kinds = {item["evidenceKind"] for item in cited}
     total, compared, matched = identity_reading(cited)
     effectful = [a for a in decision["actionsAuthorized"] if a not in EFFECT_FREE_ACTIONS]
-    boolean = lambda value: "TRUE" if value else "FALSE"
+    def boolean(value: bool) -> str:
+        return "TRUE" if value else "FALSE"
+
     facts = {
         "FACT_DISPOSITION": dsl_name(decision["disposition"]),
         "FACT_IDENTITY_TOTAL": str(total),
@@ -537,9 +541,16 @@ def run_all() -> dict[str, Any]:
     validate_receipt(receipt, decision)
 
     check_candidate = validate_candidate
-    check_evidence: Callable[[dict[str, Any]], Any] = lambda d: validate_evidence(d, candidate)
-    check_decision: Callable[[dict[str, Any]], Any] = lambda d: validate_decision(d, candidate, evidence)
-    check_receipt: Callable[[dict[str, Any]], Any] = lambda d: validate_receipt(d, decision)
+
+    def check_evidence(document: dict[str, Any]) -> dict[str, Any]:
+        return validate_evidence(document, candidate)
+
+    def check_decision(document: dict[str, Any]) -> dict[str, Any]:
+        return validate_decision(document, candidate, evidence)
+
+    def check_receipt(document: dict[str, Any]) -> None:
+        validate_receipt(document, decision)
+
     staged = {**candidate, "shape": "staged-tree", "headRevision": None, "recoverable": False}
 
     rejected = [
@@ -672,6 +683,7 @@ def run_all() -> dict[str, Any]:
         "schemaDigest": "sha256:" + SCHEMA_DIGEST,
         "grammarDigest": "sha256:" + GRAMMAR_DIGEST,
         "bindingsDigest": "sha256:" + BINDINGS_DIGEST,
+        "cqrs": cqrs_conformance.run_all(),
     }
 
 

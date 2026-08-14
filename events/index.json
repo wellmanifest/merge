@@ -1,0 +1,104 @@
+{
+  "schema": "wellmanifest.events/v1",
+  "domain": "wellmanifest.merge-decision/v1",
+  "sourceOfTruth": "operations/index.json",
+  "immutability": {
+    "appendOnly": true,
+    "eventsCarryAuthority": false,
+    "replayExecutesEffects": false
+  },
+  "events": [
+    {
+      "id": "merge.candidate.recorded",
+      "emittedBy": "merge.candidate.record",
+      "payloadFields": [
+        "candidateId",
+        "repository",
+        "shape",
+        "ref",
+        "headRevision",
+        "ahead",
+        "behind",
+        "recoverable"
+      ],
+      "documentation": "events/merge.candidate.recorded.md",
+      "authority": false,
+      "replay": {
+        "deterministic": true,
+        "effects": false
+      }
+    },
+    {
+      "id": "merge.evidence.observed",
+      "emittedBy": "merge.evidence.observe",
+      "payloadFields": [
+        "evidenceId",
+        "candidateId",
+        "evidenceKind",
+        "producer",
+        "command",
+        "deterministic",
+        "coverage"
+      ],
+      "documentation": "events/merge.evidence.observed.md",
+      "authority": false,
+      "replay": {
+        "deterministic": true,
+        "effects": false
+      }
+    },
+    {
+      "id": "merge.decision.recorded",
+      "emittedBy": "merge.decision.record",
+      "payloadFields": [
+        "decisionId",
+        "candidateId",
+        "disposition",
+        "evidenceIds",
+        "executor",
+        "actionsAuthorized",
+        "destructive",
+        "recoveryRefs"
+      ],
+      "documentation": "events/merge.decision.recorded.md",
+      "authority": false,
+      "replay": {
+        "deterministic": true,
+        "effects": false
+      }
+    },
+    {
+      "id": "merge.decision.rejected",
+      "emittedBy": "merge.decision.record",
+      "payloadFields": [
+        "candidateId",
+        "disposition",
+        "diagnostic"
+      ],
+      "documentation": "events/merge.decision.rejected.md",
+      "authority": false,
+      "replay": {
+        "deterministic": true,
+        "effects": false
+      }
+    },
+    {
+      "id": "merge.action.executed",
+      "emittedBy": "merge.action.execute",
+      "payloadFields": [
+        "decisionId",
+        "candidateId",
+        "executedActions",
+        "outcome",
+        "resultingRefs",
+        "recoveryRefs"
+      ],
+      "documentation": "events/merge.action.executed.md",
+      "authority": false,
+      "replay": {
+        "deterministic": true,
+        "effects": false
+      }
+    }
+  ]
+}
