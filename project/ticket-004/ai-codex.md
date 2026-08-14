@@ -38,6 +38,18 @@ checkout.
   from the request to execute this work.
 - Confirmed ticket-002 has published integration ownership for every target
   path and is closed on `main`.
+- Added one closed operation registry with four models, four commands, two
+  effect-free queries and two deterministic projections. Commands own the
+  forward `emits` and `rejects` relations.
+- Added five append-only event documents and three typed public rejection
+  runbooks. Their catalogues contain metadata only and point back to the
+  operation registry as the C/Q source of truth.
+- Added a dependency-free checker with nine adversarial cases and called it
+  from the existing conformance entrypoint. JSON Schema validation, Ruff,
+  governance, existing 24 adversarial mutations and all CQRS cases pass.
+- The diff contains 14 implementation files, one below the L-profile maximum.
+  The ticket remains `IN_PROGRESS / PUBLICATION` pending independent
+  exact-head review and protected merge.
 
 ## Blockers
 

@@ -3,7 +3,7 @@
 - **ID**: ticket-004
 - **Owner**: unresolved:human
 - **Status**: IN_PROGRESS
-- **Workflow state**: EDIT
+- **Workflow state**: PUBLICATION
 - **Created**: 2026-08-14
 
 ## Goal and scope
@@ -24,20 +24,20 @@ publication process.
 
 ## Acceptance criteria
 
-- [ ] AC-01: `operations/index.json` is the only Commands/Queries source of
+- [x] AC-01: `operations/index.json` is the only Commands/Queries source of
   truth; event and error catalogues do not duplicate C/Q definitions.
-- [ ] AC-02: Every registered event has a document beside it, is emitted by a
+- [x] AC-02: Every registered event has a document beside it, is emitted by a
   declared command, is append-only, carries no authority and never replays an
   effect.
-- [ ] AC-03: Every public command rejection resolves to a stable entry in
+- [x] AC-03: Every public command rejection resolves to a stable entry in
   `error/index.json` and an `error/[code].md` runbook.
-- [ ] AC-04: Command input and query output model references resolve to the
+- [x] AC-04: Command input and query output model references resolve to the
   existing closed model schema; transport formats, including future protobuf
   mappings, do not become semantic or authority sources.
-- [ ] AC-05: A dependency-free checker rejects duplicate IDs, broken model/doc
+- [x] AC-05: A dependency-free checker rejects duplicate IDs, broken model/doc
   references, orphan events/errors, query effects and unsafe replay semantics;
   the main conformance entrypoint runs it.
-- [ ] AC-06: Governance, existing conformance and the CQRS adversarial cases
+- [x] AC-06: Governance, existing conformance and the CQRS adversarial cases
   pass within the 15-file delivery bound.
 - [ ] AC-07: Exact-head Validator App review and protected merge publish the
   reference without interactive self-approval.

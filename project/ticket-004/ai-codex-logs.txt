@@ -1,0 +1,17 @@
+2026-08-14 command: ruff check standard/cqrs_conformance.py standard/conformance.py
+exit: 0
+output: All checks passed!
+2026-08-14 command: python3 -m json.tool operations/index.json operations/registry.schema.json events/index.json error/index.json; Draft202012Validator.check_schema and validate
+exit: 0
+output: PASS: registry schema and instance validate
+2026-08-14 command: PYTHONDONTWRITEBYTECODE=1 python3 standard/cqrs_conformance.py --all
+exit: 0
+output: ok=true; models=4; commands=4; queries=2; projections=2; events=5; errors=3; adversarialRejected=9
+2026-08-14 command: PYTHONDONTWRITEBYTECODE=1 python3 standard/conformance.py --all
+exit: 0
+output: ok=true; positiveDocuments=4; mergeAdversarialRejected=24; cqrs.ok=true; cqrs.adversarialRejected=9
+2026-08-14 command: ./project/governance-check.sh --actor agent
+exit: 0
+output: GOV-PASS: passed (0 errors, 0 warnings)
+2026-08-14 command: git diff --check
+exit: 0

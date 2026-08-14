@@ -1,0 +1,172 @@
+{
+  "$schema": "./registry.schema.json",
+  "schema": "wellmanifest.operations/v1",
+  "domain": "wellmanifest.merge-decision/v1",
+  "sourceOfTruth": {
+    "commandsAndQueries": "operations/index.json",
+    "events": "events/index.json",
+    "errors": "error/index.json",
+    "models": "standard/merge-decision.schema.json",
+    "transportRule": "Transport schemas encode shapes only; they do not define operation semantics or grant authority."
+  },
+  "invariants": {
+    "commandEffectsBecomeFactsOnlyThroughEvents": true,
+    "queriesAreEffectFree": true,
+    "replayExecutesEffects": false,
+    "eventsCarryAuthority": false,
+    "modelsCarryAuthority": false
+  },
+  "models": [
+    {
+      "id": "merge.candidate",
+      "schemaRef": "../standard/merge-decision.schema.json#/$defs/candidate",
+      "transport": "json-schema",
+      "authority": false
+    },
+    {
+      "id": "merge.evidence",
+      "schemaRef": "../standard/merge-decision.schema.json#/$defs/evidence",
+      "transport": "json-schema",
+      "authority": false
+    },
+    {
+      "id": "merge.decision",
+      "schemaRef": "../standard/merge-decision.schema.json#/$defs/decision",
+      "transport": "json-schema",
+      "authority": false
+    },
+    {
+      "id": "merge.receipt",
+      "schemaRef": "../standard/merge-decision.schema.json#/$defs/receipt",
+      "transport": "json-schema",
+      "authority": false
+    }
+  ],
+  "commands": [
+    {
+      "id": "merge.candidate.record",
+      "uri": "urn:wellmanifest:merge:command:candidate-record",
+      "intent": "Register one divergent shape as a candidate under evaluation.",
+      "inputModel": "merge.candidate",
+      "authority": "external-policy",
+      "inputCarriesAuthority": false,
+      "idempotency": "required",
+      "effect": "append-events",
+      "emits": [
+        "merge.candidate.recorded"
+      ],
+      "rejects": [
+        "MRG-CANDIDATE-001"
+      ]
+    },
+    {
+      "id": "merge.evidence.observe",
+      "uri": "urn:wellmanifest:merge:command:evidence-observe",
+      "intent": "Attach one typed observation and the command that produced it.",
+      "inputModel": "merge.evidence",
+      "authority": "external-policy",
+      "inputCarriesAuthority": false,
+      "idempotency": "required",
+      "effect": "append-events",
+      "emits": [
+        "merge.evidence.observed"
+      ],
+      "rejects": [
+        "MRG-EVIDENCE-001"
+      ]
+    },
+    {
+      "id": "merge.decision.record",
+      "uri": "urn:wellmanifest:merge:command:decision-record",
+      "intent": "Record one disposition after its evidence obligation is satisfied.",
+      "inputModel": "merge.decision",
+      "authority": "external-policy",
+      "inputCarriesAuthority": false,
+      "idempotency": "required",
+      "effect": "append-events",
+      "emits": [
+        "merge.decision.recorded",
+        "merge.decision.rejected"
+      ],
+      "rejects": [
+        "MRG-EVIDENCE-001",
+        "MRG-DECISION-001"
+      ]
+    },
+    {
+      "id": "merge.action.execute",
+      "uri": "urn:wellmanifest:merge:command:action-execute",
+      "intent": "Execute only actions authorized by a recorded decision and append a receipt fact.",
+      "inputModel": "merge.receipt",
+      "authority": "external-policy",
+      "inputCarriesAuthority": false,
+      "idempotency": "required",
+      "effect": "authorized-action-and-append-receipt",
+      "emits": [
+        "merge.action.executed"
+      ],
+      "rejects": [
+        "MRG-DECISION-001"
+      ]
+    }
+  ],
+  "queries": [
+    {
+      "id": "merge.candidate.get",
+      "uri": "urn:wellmanifest:merge:query:candidate-get",
+      "intent": "Read one recorded candidate without changing its state.",
+      "inputModel": "merge.candidate",
+      "outputModel": "merge.candidate",
+      "cardinality": "one-or-none",
+      "projection": "merge.candidate-record",
+      "consistency": "eventual",
+      "effect": "none",
+      "emits": []
+    },
+    {
+      "id": "merge.decision.get",
+      "uri": "urn:wellmanifest:merge:query:decision-get",
+      "intent": "Read one decision, its observed evidence and its execution receipt.",
+      "inputModel": "merge.decision",
+      "outputModel": "merge.decision",
+      "cardinality": "one-or-none",
+      "projection": "merge.decision-record",
+      "consistency": "eventual",
+      "effect": "none",
+      "emits": []
+    }
+  ],
+  "projections": [
+    {
+      "id": "merge.candidate-record",
+      "intent": "The latest recorded facts for one candidate.",
+      "outputModel": "merge.candidate",
+      "cardinality": "one-or-none",
+      "rebuiltFrom": [
+        "merge.candidate.recorded"
+      ],
+      "reducer": {
+        "version": 1,
+        "deterministic": true,
+        "effects": false
+      }
+    },
+    {
+      "id": "merge.decision-record",
+      "intent": "One decision attempt, its evidence observations and its execution receipt.",
+      "outputModel": "merge.decision",
+      "cardinality": "one-or-none",
+      "rebuiltFrom": [
+        "merge.evidence.observed",
+        "merge.decision.recorded",
+        "merge.decision.rejected",
+        "merge.action.executed"
+      ],
+      "reducer": {
+        "version": 1,
+        "deterministic": true,
+        "effects": false
+      }
+    }
+  ]
+}

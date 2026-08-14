@@ -1,0 +1,37 @@
+{
+  "schema": "wellmanifest.errors/v1",
+  "domain": "wellmanifest.merge-decision/v1",
+  "sourceOfTruth": "operations/index.json#/commands/*/rejects",
+  "errors": [
+    {
+      "code": "MRG-CANDIDATE-001",
+      "documentation": "error/MRG-CANDIDATE-001.md",
+      "retryability": "after-correction",
+      "status": {
+        "http": 422,
+        "grpc": "INVALID_ARGUMENT"
+      },
+      "rejectionEvent": "merge.decision.rejected"
+    },
+    {
+      "code": "MRG-EVIDENCE-001",
+      "documentation": "error/MRG-EVIDENCE-001.md",
+      "retryability": "after-new-evidence",
+      "status": {
+        "http": 422,
+        "grpc": "FAILED_PRECONDITION"
+      },
+      "rejectionEvent": "merge.decision.rejected"
+    },
+    {
+      "code": "MRG-DECISION-001",
+      "documentation": "error/MRG-DECISION-001.md",
+      "retryability": "after-new-evidence",
+      "status": {
+        "http": 409,
+        "grpc": "FAILED_PRECONDITION"
+      },
+      "rejectionEvent": "merge.decision.rejected"
+    }
+  ]
+}
