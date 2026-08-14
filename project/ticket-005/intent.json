@@ -1,0 +1,107 @@
+{
+  "schema": "new-project.intent/v3",
+  "ticket": "ticket-005",
+  "summary": "Complete the command rejection surface",
+  "workstream": "integration",
+  "classification": {
+    "kind": "BUG",
+    "priority": "P1",
+    "origin": "regression"
+  },
+  "allowedPaths": [
+    "operations/**",
+    "error/**",
+    "standard/conformance.py",
+    "docs/**",
+    "project/ticket-005/**",
+    "TODO.md",
+    "project/TICKETS.md"
+  ],
+  "forbiddenPaths": [
+    "project/ticket-*/user-*.md"
+  ],
+  "stacks": [
+    "python"
+  ],
+  "dependsOn": [],
+  "conflictsWith": [],
+  "integrationTicket": null,
+  "delivery": {
+    "acceptedBaseSha": "9590b9d6abea41102afe1127a3813084a904008f",
+    "targetBranch": "main",
+    "outcome": "Every diagnostic a command can raise is declared by that command and documented, and the declaration is derived from the validator rather than kept by hand",
+    "nonGoals": [
+      "No change to the operations registry as the source of truth; commands, events and projections keep their shape",
+      "No registration of authoring diagnostics as command rejections; CQRS-* and MRG-CONTRACT-001 refuse a malformed standard, not a request",
+      "No new document family and no runtime dependency"
+    ],
+    "complexity": "M",
+    "estimatedMinutes": 30,
+    "budgets": {
+      "maxImplementationFiles": 9,
+      "maxAffectedComponents": 3,
+      "maxPublicInterfaceChanges": 2,
+      "maxRuntimeDependencies": 0
+    },
+    "architecture": {
+      "status": "accepted",
+      "decision": "Derive each command's rejection set from its validator with the ast module and assert it equals the registry, so the surface cannot drift silently when a rule is added",
+      "components": [
+        {
+          "name": "rejection-surface",
+          "paths": [
+            "operations/index.json",
+            "error/index.json",
+            "standard/conformance.py"
+          ]
+        },
+        {
+          "name": "diagnostic-documents",
+          "paths": [
+            "error/MRG-DOC-001.md",
+            "error/MRG-REF-001.md",
+            "error/MRG-SECRET-001.md",
+            "error/MRG-RECOVERY-001.md",
+            "error/MRG-MERGE-001.md",
+            "error/MRG-RECEIPT-001.md"
+          ]
+        }
+      ],
+      "responsibilityChanges": false,
+      "interfaceChanges": [
+        "command rejects lists grow to the codes their validation already raised"
+      ],
+      "dataChanges": [],
+      "ui": {
+        "impact": "none",
+        "states": [],
+        "evidence": []
+      },
+      "rollback": "Revert the ticket; the previous registry described a narrower surface than the checker enforced"
+    },
+    "runtimeDependencies": [],
+    "validation": [
+      {
+        "criterion": "AC-01",
+        "commands": [
+          "python3 standard/cqrs_conformance.py --all"
+        ],
+        "evidence": "The CQRS suite passes with the completed rejects lists and the error catalogue still closes over them exactly"
+      },
+      {
+        "criterion": "AC-02",
+        "commands": [
+          "python3 standard/conformance.py --all"
+        ],
+        "evidence": "The decision suite passes and reports the derived rejection surface per command"
+      },
+      {
+        "criterion": "AC-03",
+        "commands": [
+          "python3 - <<'EOF'  # drop one declared code and re-run"
+        ],
+        "evidence": "Removing a code from the registry is rejected with MRG-CQRS-001 rather than passing silently"
+      }
+    ]
+  }
+}
