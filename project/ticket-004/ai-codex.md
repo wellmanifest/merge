@@ -48,12 +48,16 @@ checkout.
   from the existing conformance entrypoint. JSON Schema validation, Ruff,
   governance, existing 24 adversarial mutations and all CQRS cases pass.
 - The diff contains 14 implementation files, one below the L-profile maximum.
-  The ticket remains `IN_PROGRESS / PUBLICATION` pending independent
-  exact-head review and protected merge.
+  Publication was started as PR #6 before the previously reserved ticket-003
+  became visible as PR #5.
+- PR #6 was closed without merge as soon as the same-workstream collision was
+  discovered. The implementation branch and all commits remain preserved.
 
 ## Blockers
 
-- None inside the recorded intent; proceed without a second confirmation.
+- Ticket-003 is `IN_PROGRESS / PUBLICATION` in the same integration workstream
+  and must be merged or otherwise reach a terminal state first. Its AC-05
+  explicitly requires the next real `schedule` event, not a manual dispatch.
 - New authority remains required for destructive action, secret access, new
   external coordination or material objective expansion. Protected delivery
   may be invoked without another prompt when publication is in scope; its

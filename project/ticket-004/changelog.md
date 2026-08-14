@@ -14,3 +14,6 @@
   cases and wired it into the existing standard entrypoint.
 - Replaced four pre-existing assigned lambdas in the touched entrypoint with
   named functions so Ruff passes without changing semantics.
+- Closed PR #6 without merge after discovering ticket-003 already occupied the
+  integration workstream; preserved the exact implementation branch and moved
+  ticket-004 to `BLOCKED / BLOCKED` pending the schedule-only canary.

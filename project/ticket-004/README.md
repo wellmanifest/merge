@@ -2,8 +2,8 @@
 
 - **ID**: ticket-004
 - **Owner**: unresolved:human
-- **Status**: IN_PROGRESS
-- **Workflow state**: PUBLICATION
+- **Status**: BLOCKED
+- **Workflow state**: BLOCKED
 - **Created**: 2026-08-14
 
 ## Goal and scope
@@ -50,6 +50,16 @@ publication process.
 - Do not import the seven additional untracked error drafts in this slice.
 - Do not treat an event, projection, transport schema or Markdown runbook as an
   authorization grant.
+
+## Coordination state
+
+The implementation is complete and preserved at
+`ca9e403ede3a430e4741f7f5889b1eba7babf08a`, but publication is paused. After
+this ticket was allocated, the previously reserved ticket-003 opened PR #5 in
+the same integration workstream. PR #6 was therefore closed without merge and
+its branch retained. Ticket-004 returns to `IN_PROGRESS / PUBLICATION` only
+after ticket-003's schedule-only canary reaches a terminal state and this
+branch is updated from integrated `main`.
 
 ## Participants
 

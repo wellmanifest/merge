@@ -15,3 +15,5 @@ exit: 0
 output: GOV-PASS: passed (0 errors, 0 warnings)
 2026-08-14 command: git diff --check
 exit: 0
+2026-08-14 GitHub API: wellmanifest/merge PR #6 state=CLOSED; mergedAt=null; head=ca9e403ede3a430e4741f7f5889b1eba7babf08a; branch preserved
+2026-08-14 coordination: ticket-003 PR #5 is IN_PROGRESS / PUBLICATION in workstream integration and requires event=schedule; ticket-004 moved to BLOCKED before any Validator dispatch

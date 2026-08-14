@@ -31,7 +31,8 @@
     "python"
   ],
   "dependsOn": [
-    "ticket-002"
+    "ticket-002",
+    "ticket-003"
   ],
   "conflictsWith": [],
   "integrationTicket": null,
