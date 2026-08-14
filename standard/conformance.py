@@ -10,8 +10,10 @@ from __future__ import annotations
 import argparse
 import copy
 import hashlib
+import importlib.util
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Any, Callable
 
@@ -19,7 +21,12 @@ ROOT = Path(__file__).resolve().parent
 SCHEMA_PATH = ROOT / "merge-decision.schema.json"
 GRAMMAR_PATH = ROOT / "merge-decision.v1.gbnf"
 BINDINGS_PATH = ROOT / "tool-bindings.json"
-SCHEMA_DIGEST = "82e844932c2f60b96fcf13d49cbfa8ad8603d4e4b6c8ba9367bda1d515893381"
+RULES_PATH = ROOT / "merge-rules.env"
+ENV_DSL_PATH = ROOT / "env_dsl.py"
+ENV_DSL_SOURCE_REVISION = "1d5ed6c"
+ENV_DSL_DIGEST = "5bf2e2b0983f9bbe421278a2eb76f485a5fee4c10cd820a19bfd5d1ac6e2dc24"
+RULES_DIGEST = "b966dd6e3a8cd143df1235d35d6dbc31f6ba716d63ddbdc352217798fbf6ae0a"
+SCHEMA_DIGEST = "6a5d4fe35bd585a4cb9faa6cf36e2696e8072388070bff5efabe13076704324a"
 GRAMMAR_DIGEST = "8e3aa2cb41ed435a503ae656374e5acd1e202876f9a0dd430d2f64e5b478cd8f"
 BINDINGS_DIGEST = "d20b43eafac91d7ace8d4b126ca8838b0b33e9d68f17d84f4a0a010ecac48abe"
 SCHEMA_FAMILY = "wellmanifest.merge-decision/v1"
@@ -290,6 +297,90 @@ def validate_receipt(doc: dict[str, Any], decision: dict[str, Any]) -> None:
         raise ContractError("MRG-RECOVERY-001", "a destructive receipt must carry its recovery references")
 
 
+EFFECT_FREE_ACTIONS = {"record-backlog", "no-action"}
+
+
+def load_env_dsl() -> Any:
+    """Load the vendored Env DSL checker from the exact file whose digest was checked.
+
+    Loading by explicit path keeps the pin and the executed code the same
+    object, and keeps this suite importable from any working directory.
+    """
+    if digest(ENV_DSL_PATH.read_bytes()) != ENV_DSL_DIGEST:
+        raise ContractError("MRG-CONTRACT-001", "pinned Env DSL checker digest mismatch")
+    spec = importlib.util.spec_from_file_location("merge_pinned_env_dsl", ENV_DSL_PATH)
+    if spec is None or spec.loader is None:
+        raise ContractError("MRG-CONTRACT-001", "pinned Env DSL checker is not loadable")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def dsl_name(value: str) -> str:
+    return value.upper().replace("-", "_")
+
+
+def identity_reading(cited: list[dict[str, Any]]) -> tuple[int, int, int]:
+    """Read the broadest content-identity observation the decision cites."""
+    records = [i for i in cited if i["evidenceKind"] == "content-identity" and i.get("coverage")]
+    if not records:
+        return 0, 0, 0
+    best = max(records, key=lambda i: (i["coverage"]["total"], i["coverage"]["matched"]))
+    coverage = best["coverage"]
+    return coverage["total"], coverage["compared"], coverage["matched"]
+
+
+def facts_for(
+    candidate: dict[str, Any], decision: dict[str, Any], evidence: dict[str, dict[str, Any]]
+) -> dict[str, str]:
+    """Project one decision onto the Env DSL fact constants."""
+    cited = [evidence[i] for i in decision["evidenceIds"] if i in evidence]
+    kinds = {item["evidenceKind"] for item in cited}
+    total, compared, matched = identity_reading(cited)
+    effectful = [a for a in decision["actionsAuthorized"] if a not in EFFECT_FREE_ACTIONS]
+    boolean = lambda value: "TRUE" if value else "FALSE"
+    facts = {
+        "FACT_DISPOSITION": dsl_name(decision["disposition"]),
+        "FACT_IDENTITY_TOTAL": str(total),
+        "FACT_IDENTITY_COMPARED": str(compared),
+        "FACT_IDENTITY_MATCHED": str(matched),
+        "FACT_RECOVERY_REF_COUNT": str(len(decision["recoveryRefs"])),
+        "FACT_DETERMINISTIC_EVIDENCE_COUNT": str(sum(1 for i in cited if i["deterministic"])),
+        "FACT_EFFECTFUL_ACTION_COUNT": str(len(effectful)),
+        "FACT_DESTRUCTIVE": boolean(decision["destructive"]),
+        "FACT_PATCH_RECOVERY": boolean(any(r.startswith("patch:") for r in decision["recoveryRefs"])),
+        "FACT_CANDIDATE_RECOVERABLE": boolean(candidate["recoverable"]),
+        "FACT_HAS_REPLACEMENT": boolean(decision.get("supersededBy") is not None),
+    }
+    for kind in sorted(EVIDENCE_KINDS):
+        facts[f"FACT_HAS_{dsl_name(kind)}"] = boolean(kind in kinds)
+    return facts
+
+
+def dsl_admissible(
+    candidate: dict[str, Any], decision: dict[str, Any], evidence: dict[str, dict[str, Any]]
+) -> bool:
+    """Evaluate the same rules through the pinned Env DSL evaluator."""
+    env_dsl = load_env_dsl()
+    document, diagnostics = env_dsl.parse_file(RULES_PATH)
+    if document is None or diagnostics:
+        raise ContractError("MRG-CONTRACT-001", "the rule document is not valid Env DSL")
+    merged, diagnostics = env_dsl.merge_documents([document])
+    if diagnostics:
+        raise ContractError("MRG-CONTRACT-001", "the rule document does not merge")
+    merged.update(facts_for(candidate, decision, evidence))
+    values, diagnostics = env_dsl.evaluate_constants(
+        merged, {"ENV_DSL_ENVIRONMENT": document.environment}
+    )
+    if diagnostics:
+        raise ContractError("MRG-CONTRACT-001", "rule evaluation reported diagnostics")
+    result = values.get("DECISION_ADMISSIBLE_CONDITION")
+    if not isinstance(result, bool):
+        raise ContractError("MRG-CONTRACT-001", "admissibility must evaluate to a boolean")
+    return result
+
+
 def expect_rejected(
     name: str, code: str, validator: Callable[[dict[str, Any]], Any],
     base: dict[str, Any], mutation: Callable[[dict[str, Any]], None],
@@ -397,6 +488,7 @@ def run_all() -> dict[str, Any]:
         digest(canonical(schema)) != SCHEMA_DIGEST
         or digest(grammar) != GRAMMAR_DIGEST
         or digest(canonical(bindings)) != BINDINGS_DIGEST
+        or digest(RULES_PATH.read_bytes()) != RULES_DIGEST
     ):
         raise ContractError("MRG-CONTRACT-001", "contract digest mismatch")
     if schema.get("$id") != SCHEMA_URI:
@@ -481,10 +573,58 @@ def run_all() -> dict[str, Any]:
                                recoveryRefs=["ref:5555555555555555555555555555555555555555"]),
         )
     )
+    # The Env DSL rule document is the portable projection of the same rules.
+    # Parity is asserted, not assumed: the equations must agree with this file
+    # on the reference decision and on every mutation the equations can express.
+    if not dsl_admissible(candidate, decision, evidence):
+        raise ContractError("MRG-CONTRACT-001", "the rule equations reject the reference decision")
+    parity = []
+    for case, mutation in (
+        ("disposition-without-required-evidence", lambda d: d.update(disposition="obsolete")),
+        ("already-implemented-on-partial-identity",
+         lambda d: d.update(disposition="already-implemented",
+                            evidenceIds=["evidence:hearsay-identity", "evidence:recovery"],
+                            actionsAuthorized=["no-action"], destructive=False, recoveryRefs=[])),
+        ("superseded-without-replacement",
+         lambda d: d.update(disposition="superseded",
+                            evidenceIds=["evidence:identity", "evidence:recovery"],
+                            actionsAuthorized=["no-action"], destructive=False, recoveryRefs=[])),
+        ("defer-authorizes-effects",
+         lambda d: d.update(disposition="defer", evidenceIds=["evidence:intent"],
+                            actionsAuthorized=["delete-branch"], destructive=True)),
+        ("destructive-without-recovery-ref", lambda d: d.update(recoveryRefs=[])),
+        ("destructive-without-recoverability-evidence",
+         lambda d: d.update(evidenceIds=["evidence:gate", "evidence:history"])),
+        ("advisory-evidence-authorizes-destruction",
+         lambda d: d.update(disposition="regressive",
+                            evidenceIds=["evidence:hearsay-identity", "evidence:hearsay-recovery"],
+                            actionsAuthorized=["delete-branch"], destructive=True)),
+    ):
+        mutated = copy.deepcopy(decision)
+        mutation(mutated)
+        if dsl_admissible(candidate, mutated, evidence):
+            raise AssertionError(f"the rule equations accepted {case}")
+        parity.append(case)
+    staged_decision = copy.deepcopy(decision)
+    staged_decision.update(disposition="regressive",
+                           evidenceIds=["evidence:identity", "evidence:recovery"],
+                           actionsAuthorized=["discard-worktree"], destructive=True)
+    if dsl_admissible(staged, staged_decision, evidence):
+        raise AssertionError("the rule equations accepted uncommitted-discard-with-git-ref-only")
+    parity.append("uncommitted-discard-with-git-ref-only")
+
     return {
         "schema": "wellmanifest.merge-decision-conformance/v1",
         "ok": True,
         "positiveDocuments": 4,
+        "ruleProjection": {
+            "document": "merge-rules.env",
+            "language": "wellmanifest/env-dsl",
+            "sourceRevision": ENV_DSL_SOURCE_REVISION,
+            "validatorDigest": "sha256:" + ENV_DSL_DIGEST,
+            "rulesDigest": "sha256:" + RULES_DIGEST,
+            "parityCases": parity,
+        },
         "dispositions": sorted(DISPOSITIONS),
         "adversarialRejected": rejected,
         "schemaDigest": "sha256:" + SCHEMA_DIGEST,

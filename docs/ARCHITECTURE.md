@@ -88,6 +88,33 @@ flowchart TD
 - **A receipt cannot exceed its decision.** Executed actions must be a subset
   of what was authorized.
 
+## Rules as portable equations
+
+The disposition and destruction rules are written twice: once as this
+repository's checker, once as [Env DSL](https://github.com/wellmanifest/env-dsl)
+equations in [`standard/merge-rules.env`](../standard/merge-rules.env). Env DSL
+is the Wellmanifest contract for constants and conditions expressed as operators
+inside equations, so the rules become data that any adapter can evaluate.
+
+The projection is bound the same way this family binds every external contract:
+the evaluator is vendored byte-for-byte from `wellmanifest/env-dsl@1d5ed6c`,
+its digest is pinned, and it is loaded from the exact file whose digest was
+verified rather than through `sys.path`. Facts are projected from a decision
+onto `FACT_*` constants; `DECISION_ADMISSIBLE_CONDITION` is the single
+conjunction that answers the question.
+
+Two limits are deliberate. Env DSL has no set membership, so an evidence
+obligation is projected as one `FACT_HAS_*` boolean per kind rather than as a
+subset test. And when a decision cites several content-identity observations,
+the projection reads the broadest one; the checker in this repository remains
+authoritative for the rest.
+
+The policy prose in `dsl` blocks above follows the
+[`policy-dsl`](https://github.com/wellmanifest/policy-dsl) style used by
+`wellmanifest/new-project` contributor policy. That language's own grammar is
+still under implementation in its `ticket-001`, so these blocks are formatted
+for it but not yet checked by it.
+
 ## Evidence and producers
 
 Nine evidence kinds, each bound to a producer that can actually answer it, in
@@ -121,4 +148,4 @@ trust root. The `semcod` producers add reach:
 | `MRG-CONTRACT-001` | The pinned schema, grammar or binding digests do not match. |
 
 `standard/conformance.py --all` proves each code against an adversarial
-mutation and pins all three contract digests.
+mutation and pins all four contract digests.

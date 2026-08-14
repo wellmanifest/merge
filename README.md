@@ -12,9 +12,10 @@ produce that evidence. It decides; it never merges, deletes or publishes.
 python3 standard/conformance.py --all
 ```
 
-Dependency-free. Pins the schema, grammar and tool-binding digests, accepts
-four canonical documents and proves that 21 adversarial mutations reject with
-their declared `MRG-*` code.
+Dependency-free. Pins the schema, grammar, tool-binding and rule digests,
+accepts four canonical documents, proves that 21 adversarial mutations reject
+with their declared `MRG-*` code, and checks that the portable rule equations
+agree with this implementation on 8 of them.
 
 ## The seven dispositions
 
@@ -27,6 +28,29 @@ their declared `MRG-*` code.
 | `regressive` | applying it would undo something | identity showing divergence |
 | `obsolete` | what it changes no longer exists | dependency evidence |
 | `defer` | live, but not now | intent delta; effect-free actions only |
+
+## The rules are equations, not prose
+
+The decision rules exist twice on purpose. `standard/conformance.py` is the
+reference implementation; `standard/merge-rules.env` is the same logic written
+as [Env DSL](https://github.com/wellmanifest/env-dsl) operator equations, so a
+consumer in any language can evaluate admissibility without running this
+repository's Python:
+
+```env
+RULE_ALREADY_IMPLEMENTED_CONDITION=@FACT_DISPOSITION!=:ALREADY_IMPLEMENTED||(@FACT_HAS_CONTENT_IDENTITY&&@FACT_IDENTITY_TOTAL>0&&@FACT_IDENTITY_COMPARED==@FACT_IDENTITY_TOTAL&&@FACT_IDENTITY_MATCHED==@FACT_IDENTITY_TOTAL)
+RULE_UNCOMMITTED_PATCH_CONDITION=!@FACT_DESTRUCTIVE||@FACT_CANDIDATE_RECOVERABLE||@FACT_PATCH_RECOVERY
+DECISION_ADMISSIBLE_CONDITION=@RULE_ADOPT_CONDITION&&@RULE_REBUILD_CONDITION&&...
+```
+
+Each rule is an implication: a disposition that does not apply satisfies its
+own rule vacuously, so one conjunction decides admissibility. The evaluation is
+effect-free and descriptive — it reads no clock, network or secret, and it
+authorizes nothing.
+
+Parity is asserted rather than assumed. The suite evaluates both paths over the
+reference decision and over every mutation the equations can express, and fails
+if they ever disagree.
 
 ## Reused tools
 
@@ -58,7 +82,9 @@ whole evidence set is non-deterministic must not authorize destruction.
 | `standard/merge-decision.schema.json` | closed candidate, evidence, decision and receipt contracts |
 | `standard/merge-decision.v1.gbnf` | grammar emitting only canonical decisions |
 | `standard/tool-bindings.json` | evidence kind → producer, with real commands |
-| `standard/conformance.py` | the disposition and recovery rules, with adversarial proof |
+| `standard/merge-rules.env` | the same rules as portable Env DSL operator equations |
+| `standard/env_dsl.py` | Env DSL evaluator pinned byte-for-byte to `wellmanifest/env-dsl@1d5ed6c` |
+| `standard/conformance.py` | the disposition and recovery rules, with adversarial proof and DSL parity |
 | `docs/ARCHITECTURE.md` | shapes, dispositions, rules, diagnostics |
 | `docs/LOGIC_FLOW.md` | evidence ordering and the two destruction gates |
 | `docs/PLAYBOOK.md` | six real decisions and what each cost to make |
