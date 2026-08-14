@@ -50,11 +50,13 @@ manual dispatch.
   branch after its implementation PR was closed. Without editing that ticket,
   the branch was attached to draft PR #7; draft PRs preserve ownership while
   validator-agent deterministically skips them.
+- Scheduled run `31839610022` generated and completed the
+  `scan-direct (wellmanifest, merge)` leg without a manual dispatch. The report
+  bound registry digest `4910fa6c…`, exact head `ec877d8…`, ticket-003 and the
+  stable correlation ID, then recorded App approval and explicit merge.
+- The protected process merged PR #5 as `9060008…` and deleted its branch. All
+  acceptance criteria now have deterministic repository or GitHub API evidence.
 
 ## Blockers
 
-- None inside the recorded intent; proceed without a second confirmation.
-- New authority remains required for destructive action, secret access, new
-  external coordination or material objective expansion. Protected delivery
-  may be invoked without another prompt when publication is in scope; its
-  exact-head trusted approval remains independent evidence.
+- None. The ticket is complete on integrated `main`.

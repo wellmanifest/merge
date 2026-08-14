@@ -6,6 +6,6 @@
 - [x] `project/ticket-002` — assign the CQRS operation, event, error and model
   contract namespaces to the integration workstream before publishing the
   reference skeleton.
-- [ ] `project/ticket-003` — correct the autonomous merge guide to the deployed
+- [x] `project/ticket-003` — correct the autonomous merge guide to the deployed
   single-registry and PAT-isolated runtime, then prove it with a schedule-only
   Validator App merge.

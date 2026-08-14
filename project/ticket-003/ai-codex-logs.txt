@@ -9,3 +9,10 @@ exit: 0
 output: GOV-PASS: passed (0 errors, 0 warnings)
 2026-08-14 hosted run 31838880430: governance / remote lifecycle=FAIL; public branch snapshot showed orphaned ticket/004-cqrs-contracts after PR #6 closed without merge
 2026-08-14 coordination: created wellmanifest/merge draft PR #7 for the retained ticket-004 branch at 8ab026437089ac7e3e0e3ffd21f45fa28f62f630; ticket remains BLOCKED and validator-agent skips isDraft=true
+2026-08-14 scheduled run: subactor/validator-agent actions run 31839610022; event=schedule; head=a78719afdcec384e07346cbe8d114032469631cf; test=PASS; plan-direct-scan=PASS; generated scan legs=33
+2026-08-14 scheduled job: 94893608605 scan-direct (wellmanifest, merge)=PASS; registry_digest=4910fa6c3ba1f6af961d9aec3941a4785ccff76aaed58386a3019e9e5d0dda10; artifact=validator-direct-scan-wellmanifest-merge id=9233797066
+2026-08-14 artifact: PR #5 expected_head=ec877d8af719c169be03634160000b5047094b5f; ticket=ticket-003; correlation=merge-ticket-003-schedule-canary; status=approved; merged=true; operations=[Approved,Explicitly merged]; PR #7 skipped=draft pull request
+2026-08-14 GitHub API: ifuri-validator-agent[bot] review=APPROVED commit=ec877d8af719c169be03634160000b5047094b5f submitted_at=2026-08-14T20:50:19Z
+2026-08-14 GitHub API: PR #5 merged_at=2026-08-14T20:50:23Z; merge_commit=906000833031bf3afa589eb91e6907fd3ac19d63; merged_by=ifuri-validator-agent[bot]; implementation branch=404
+2026-08-14 scheduled queue job: validate job 94893578490=FAIL at Run queue Validator; RuntimeError='gh: API rate limit already exceeded for user ID 5669657.'; dependency App token setup and install-validator had already passed
+2026-08-14 isolation verdict: aggregate run 31839610022=FAIL while independent plan-direct-scan=PASS and scan-direct (wellmanifest, merge)=PASS with merged=true
