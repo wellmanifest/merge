@@ -17,3 +17,6 @@
 - Closed PR #6 without merge after discovering ticket-003 already occupied the
   integration workstream; preserved the exact implementation branch and moved
   ticket-004 to `BLOCKED / BLOCKED` pending the schedule-only canary.
+- Resumed only after scheduled PR #5 and governance-only PR #8 made ticket-003
+  terminal on integrated `main`; repeated governance, 9 CQRS mutations, 24
+  merge mutations, focused Ruff and the 14-file budget check successfully.
