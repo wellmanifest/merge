@@ -8,3 +8,5 @@
   `models/**` and `proto/**` without making absent contracts required.
 - Preserved the managed adoption base, lock and the untracked drafts in the
   primary checkout.
+- Recorded exact-head Validator approval, protected merge and branch deletion;
+  closed the prerequisite as `DONE / DONE` from integrated `main`.

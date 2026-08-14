@@ -2,8 +2,8 @@
 
 - **ID**: ticket-002
 - **Owner**: unresolved:human
-- **Status**: IN_PROGRESS
-- **Workflow state**: PUBLICATION
+- **Status**: DONE
+- **Workflow state**: DONE
 - **Created**: 2026-08-14
 
 ## Goal and scope
@@ -26,8 +26,17 @@ protected publication process.
   ownership remains unchanged.
 - [x] AC-03: The manifest remains schema-valid, and the managed governance gate
   plus the merge conformance suite pass.
-- [ ] AC-04: The prerequisite is published through exact-head protected review;
+- [x] AC-04: The prerequisite is published through exact-head protected review;
   no interactive agent approves or merges its own change.
+
+## Publication evidence
+
+- Pull request #3 passed `conformance` and `governance / remote lifecycle` on
+  exact head `0be726e6899266c138a360d185acd5f0bcb5cca9`.
+- `ifuri-validator-agent[bot]` approved that exact head; the protected process
+  merged it as `dfca0c31a4171062f603400265888ca62ee27a12` on 2026-08-14.
+- The implementation branch was deleted by the server. The integrated manifest
+  on `main` now owns all five new namespaces through `integration`.
 
 ## Non-goals
 
