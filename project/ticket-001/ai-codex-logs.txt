@@ -1,0 +1,3 @@
+2026-08-14 command: python3 standard/conformance.py --all
+exit: 0
+output: {"ok":true,"positiveDocuments":4,"adversarialRejected":24,"envDslParityCases":10}

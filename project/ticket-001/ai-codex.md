@@ -36,6 +36,10 @@ reviewer and does not authorize a direct merge.
 - Initialized the bounded ticket and recorded `SESSION_EXECUTION_AUTHORIZATION`.
 - Adopted published governance v0.18.0 at exact revision
   `769183ca27593af1d166acee11bc9e37decf9870`.
+- Added one hosted `conformance` job that runs the existing standard suite and
+  the managed governance gate with full base history.
+- Updated root guidance to reflect the protected registry as the only
+  repository/check list; scheduled matrix and runtime config are projections.
 
 ## Blockers
 

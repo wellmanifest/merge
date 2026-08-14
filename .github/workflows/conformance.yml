@@ -1,0 +1,23 @@
+name: conformance
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  conformance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the exact revision with its accepted base
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Validate merge decisions and Env DSL parity
+        run: python3 standard/conformance.py --all
+      - name: Validate bounded governance intent
+        run: ./project/governance-check.sh --actor agent

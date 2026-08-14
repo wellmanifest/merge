@@ -98,11 +98,12 @@ approval would be a self-approval and its merge an unreviewed write. It
 authorizes `request-autonomous-merge`; the validator identity in CI validates at
 the exact head, approves, merges and deletes the branch.
 
-Six conditions gate that, and they live in four places that must agree — the
-validator's repository matrix, its scan configuration, the standing policy
-variables, and the target repository's ruleset. A repository present in one and
-absent from another produces the worst outcome available: green checks, a
-configured reviewer, no error, and a pull request that never merges.
+Six conditions gate that. Repository membership, base branches and exact check
+names now have one source in the Validator's protected registry; the scheduled
+matrix and runtime scan configuration are generated from those same bytes.
+The remaining independent boundaries are the standing policy variables and
+the target repository's ruleset. A registry entry is therefore reviewed once,
+while a digest mismatch fails before a target token is minted.
 [`docs/AUTONOMOUS_MERGE.md`](docs/AUTONOMOUS_MERGE.md) carries the checklist and
 the diagnosis order.
 
