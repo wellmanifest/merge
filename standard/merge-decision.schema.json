@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://wellmanifest.dev/schemas/merge-decision/v1",
+  "$id": "https://wellmanifest.com/schemas/merge-decision/v1",
   "title": "Wellmanifest merge decision contracts v1",
   "description": "Closed contracts for deciding what happens to divergent work: an orphaned branch, an unpushed commit, a stale working tree or a duplicate of something already delivered. A decision records which evidence was evaluated. It never merges, deletes or publishes anything by itself, and no disposition is valid without the evidence its own rule requires.",
   "oneOf": [

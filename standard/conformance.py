@@ -23,7 +23,7 @@ SCHEMA_DIGEST = "82e844932c2f60b96fcf13d49cbfa8ad8603d4e4b6c8ba9367bda1d51589338
 GRAMMAR_DIGEST = "8e3aa2cb41ed435a503ae656374e5acd1e202876f9a0dd430d2f64e5b478cd8f"
 BINDINGS_DIGEST = "d20b43eafac91d7ace8d4b126ca8838b0b33e9d68f17d84f4a0a010ecac48abe"
 SCHEMA_FAMILY = "wellmanifest.merge-decision/v1"
-SCHEMA_URI = "https://wellmanifest.dev/schemas/merge-decision/v1"
+SCHEMA_URI = "https://wellmanifest.com/schemas/merge-decision/v1"
 
 CANDIDATE_KEYS = {
     "schema", "kind", "candidateId", "repository", "shape", "ref", "headRevision", "baseRef",
@@ -371,7 +371,7 @@ def sample() -> tuple[dict[str, Any], dict[str, dict[str, Any]], dict[str, Any],
         "candidateId": candidate["candidateId"], "disposition": "rebuild",
         "evidenceIds": ["evidence:gate", "evidence:history", "evidence:intent", "evidence:identity", "evidence:recovery"],
         "rationale": "Intent is still live on the target, but the delivery cannot pass the gate as authored, so the history is rebuilt plan-first with authorship preserved.",
-        "decidedBy": "actor://wellmanifest.dev/maintainer",
+        "decidedBy": "actor://wellmanifest.com/maintainer",
         "actionsAuthorized": ["rebuild-history", "open-pull-request", "delete-branch"],
         "destructive": True,
         "recoveryRefs": ["ref:5555555555555555555555555555555555555555"],
