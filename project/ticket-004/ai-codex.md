@@ -54,11 +54,15 @@ checkout.
   discovered. The implementation branch and all commits remain preserved.
 - Observed the next real scheduled Validator run and verified that Validator
   App merged ticket-003 PR #5 as `906000833031bf3afa589eb91e6907fd3ac19d63`.
-  The integration reservation is terminal, so ticket-004 resumed publication.
+- Detected during the attempted main update that trusted merge is not the
+  governance-only terminal closure: ticket-003 remains active on `main`.
+  Aborted only the unresolved local merge and kept ticket-004 parked until the
+  closure releases the integration workstream.
 
 ## Blockers
 
-- None inside the bounded CQRS publication scope; ticket-003 is integrated.
+- Ticket-003 is integrated but still `IN_PROGRESS / PUBLICATION`; its required
+  governance-only `DONE / DONE` closure must reach `main` first.
 - New authority remains required for destructive action, secret access, new
   external coordination or material objective expansion. Protected delivery
   may be invoked without another prompt when publication is in scope; its
