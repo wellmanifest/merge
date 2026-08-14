@@ -1,0 +1,78 @@
+{
+  "schema": "wellmanifest.merge-tool-bindings/v1",
+  "description": "Which producer answers which question, with a command that was actually run against a real repository. A binding names the evidence kind it can support; it does not make a decision.",
+  "bindings": [
+    {
+      "producer": "git",
+      "evidenceKind": "content-identity",
+      "question": "Is every file of this candidate already byte-identical to the target?",
+      "command": "git diff --quiet <base> -- <path>   # per file, over the candidate's full file list",
+      "deterministic": true,
+      "notes": "Must cover every changed path. A sampled or summarized comparison cannot support already-implemented; record compared/total/matched in the evidence coverage block."
+    },
+    {
+      "producer": "git",
+      "evidenceKind": "patch-equivalence",
+      "question": "Was this patch already applied upstream under a different revision?",
+      "command": "git cherry -v <base> <candidate-ref>",
+      "deterministic": true,
+      "notes": "A '+' means the patch text is not upstream. It does not mean the intent is missing: a rewritten delivery of the same intent still shows '+'. Pair it with content-identity or an explicit supersededBy revision."
+    },
+    {
+      "producer": "git",
+      "evidenceKind": "reachability",
+      "question": "Is the candidate's head reachable from the target, and how far has the target moved?",
+      "command": "git merge-base --is-ancestor <head> <base> ; git rev-list --count <base>..<ref>",
+      "deterministic": true,
+      "notes": "Reachable and ahead=0 means the work is fully contained upstream; that alone justifies deleting a branch, not discarding a working tree."
+    },
+    {
+      "producer": "todo2code",
+      "evidenceKind": "intent-delta",
+      "question": "Does this candidate add, remove or merely restate declared intent relative to the target?",
+      "command": "t2c compare-workspace <root> --base <base> --markdown-mode deterministic --communication-mode deterministic",
+      "deterministic": false,
+      "notes": "Without OPENROUTER_API_KEY the markdown extractors must be forced to deterministic or the run fails closed. Reads: rising gaps with flat alignment means declared-but-unimplemented work (a backlog candidate); large recordsRemoved with high behind-count means the candidate is a stale subset of the target, not an addition. Writes .intent/comparisons/<ts>-<hash>/."
+    },
+    {
+      "producer": "gate",
+      "evidenceKind": "gate-outcome",
+      "question": "Would the target repository's own governance gate accept this candidate as authored?",
+      "command": "./project/governance-check.sh --actor agent --base <base> --head HEAD",
+      "deterministic": true,
+      "notes": "A candidate whose intent is live but whose delivery fails the gate is a rebuild, never an adopt. Typical rebuild triggers: intent recorded in the same commit as its implementation, a missing bounded delivery contract, or paths owned by no workstream."
+    },
+    {
+      "producer": "code2llm",
+      "evidenceKind": "code-liveness",
+      "question": "Does the code this candidate touches still exist in the target, and is it reachable?",
+      "command": "code2llm <path> --mode static --validate --format json",
+      "deterministic": true,
+      "notes": "Use when the candidate edits source rather than documents. Absence of a symbol in the target is evidence for obsolete; presence with a changed shape is evidence for rebuild."
+    },
+    {
+      "producer": "deconnected",
+      "evidenceKind": "dependency-evidence",
+      "question": "Is the thing this candidate removes or abandons actually unreferenced across code, routes, services and tables?",
+      "command": "deconnected ecosystem-scan --out graph.json ; deconnected report graph.json ; deconnected seams graph.json",
+      "deterministic": true,
+      "notes": "Follows the producer's own rule: a missing reference is evidence for investigation, not permission to delete. Required before any obsolete decision that removes shared surface."
+    },
+    {
+      "producer": "giton",
+      "evidenceKind": "history-shape",
+      "question": "Does the rebuilt history satisfy plan-first ordering and preserve original authorship?",
+      "command": "giton status ; giton fixup   # rebuild staged corrections as fixup! commits instead of rewriting authored history",
+      "deterministic": true,
+      "notes": "A rebuild must keep the original author on content commits. Prefer additive fixup commits over rewriting someone else's authored commit."
+    },
+    {
+      "producer": "git",
+      "evidenceKind": "recoverability",
+      "question": "If this decision destroys the candidate, what artifact restores it?",
+      "command": "git diff --cached > <patch>   # staged tree ; git rev-parse <ref>   # branch tip",
+      "deterministic": true,
+      "notes": "Mandatory before discarding any unrecoverable shape. A branch tip revision is enough for committed work; a staged or dirty tree needs a written patch, because git alone cannot restore it."
+    }
+  ]
+}

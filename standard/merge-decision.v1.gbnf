@@ -1,0 +1,44 @@
+root ::= decision
+
+decision ::= "{\"schema\":\"wellmanifest.merge-decision/v1\",\"kind\":\"decision\",\"decisionId\":" decision-id ",\"candidateId\":" candidate-id ",\"disposition\":" disposition ",\"evidenceIds\":" evidence-array ",\"rationale\":" rationale ",\"supersededBy\":" revision-or-null ",\"decidedBy\":" actor ",\"actionsAuthorized\":" action-array ",\"destructive\":" boolean ",\"recoveryRefs\":" recovery-array ",\"decidedAt\":" timestamp "}"
+
+disposition ::= "\"adopt\"" | "\"rebuild\"" | "\"already-implemented\"" | "\"superseded\"" | "\"regressive\"" | "\"obsolete\"" | "\"defer\""
+action ::= "\"open-pull-request\"" | "\"rebuild-history\"" | "\"delete-branch\"" | "\"discard-worktree\"" | "\"record-backlog\"" | "\"no-action\""
+
+decision-id ::= "\"decision:" safe "\""
+candidate-id ::= "\"candidate:" safe "\""
+evidence-id ::= "\"evidence:" safe "\""
+evidence-array ::= "[" evidence-list "]"
+evidence-list ::= evidence-id | evidence-id "," evidence-list
+action-array ::= "[" action-list "]"
+action-list ::= action | action "," action-list
+recovery-array ::= "[]" | "[" recovery-list "]"
+recovery-list ::= recovery | recovery "," recovery-list
+recovery ::= "\"" recovery-scheme ":" recovery-body "\""
+recovery-scheme ::= "ref" | "patch" | "tag"
+recovery-body ::= recovery-char recovery-tail
+recovery-tail ::= recovery-char recovery-tail | ""
+recovery-char ::= lower | upper | digit | "." | "_" | ":" | "/" | "-"
+actor ::= "\"actor://" host "/" path "\""
+revision-or-null ::= "null" | "\"" hex40 "\""
+rationale ::= "\"" text "\""
+timestamp ::= "\"" digit digit digit digit "-" digit digit "-" digit digit "T" digit digit ":" digit digit ":" digit digit "Z\""
+boolean ::= "true" | "false"
+
+host ::= host-char host-tail
+host-tail ::= host-char host-tail | ""
+host-char ::= lower | digit | "." | "-"
+path ::= path-char path-tail
+path-tail ::= path-char path-tail | ""
+path-char ::= lower | upper | digit | "." | "_" | ":" | "-"
+safe ::= lower safe-tail
+safe-tail ::= safe-char safe-tail | ""
+safe-char ::= lower | digit | "." | "_" | "-"
+text ::= text-char text-tail
+text-tail ::= text-char text-tail | ""
+text-char ::= lower | upper | digit | " " | "." | "," | ";" | ":" | "(" | ")" | "-" | "_" | "/"
+hex40 ::= hex hex hex hex hex hex hex hex hex hex hex hex hex hex hex hex hex hex hex hex hex hex hex hex hex hex hex hex hex hex hex hex hex hex hex hex hex hex hex hex
+hex ::= digit | [a-f]
+lower ::= [a-z]
+upper ::= [A-Z]
+digit ::= [0-9]
