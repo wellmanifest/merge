@@ -2,8 +2,8 @@
 
 - **ID**: ticket-004
 - **Owner**: unresolved:human
-- **Status**: IN_PROGRESS
-- **Workflow state**: PUBLICATION
+- **Status**: DONE
+- **Workflow state**: DONE
 - **Created**: 2026-08-14
 
 ## Goal and scope
@@ -39,8 +39,18 @@ publication process.
   the main conformance entrypoint runs it.
 - [x] AC-06: Governance, existing conformance and the CQRS adversarial cases
   pass within the 15-file delivery bound.
-- [ ] AC-07: Exact-head Validator App review and protected merge publish the
+- [x] AC-07: Exact-head Validator App review and protected merge publish the
   reference without interactive self-approval.
+
+## Publication evidence
+
+- Hosted `governance / remote lifecycle` and `conformance` checks passed on
+  exact PR #7 head `5b19cd9ad1e8ef125840cac911255f0f63ddf001`.
+- Protected validator-agent run `31842721768` completed successfully;
+  `ifuri-validator-agent[bot]` approved that exact head at 21:32:17Z.
+- The protected process merged PR #7 at 21:32:21Z as
+  `28de24d66d94b1773419f679a9d098a8372a8945` and deleted the remote
+  implementation branch. This closure starts from that integrated merge.
 
 ## Non-goals
 
@@ -62,6 +72,8 @@ and its governance-only PR #8 was then merged as
 now `DONE / DONE`, so ticket-004 owns the released integration workstream and
 has updated from that exact base. Closed, unmerged PR #6 remains historical
 evidence; its branch was correctly retained and is now reused for a fresh PR.
+That replacement PR #7 is integrated and the reused implementation branch has
+now been deleted by the protected process.
 
 ## Participants
 
