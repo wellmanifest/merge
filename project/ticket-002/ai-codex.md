@@ -32,6 +32,12 @@ merged, a distinct integration ticket can own the reference contracts.
   from the request to execute this work.
 - Classified this ticket as an ownership-only prerequisite. No domain contract
   draft from the primary checkout belongs to this diff.
+- Added the five new namespaces only to the integration workstream in the
+  extendable target manifest. Existing owners and managed adoption files are
+  unchanged.
+- JSON, the exact ownership assertion, the governance gate and all merge
+  conformance cases pass. The ticket remains `IN_PROGRESS / PUBLICATION` until
+  independent exact-head review and protected merge.
 
 ## Blockers
 

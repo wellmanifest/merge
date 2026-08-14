@@ -3,7 +3,7 @@
 - **ID**: ticket-002
 - **Owner**: unresolved:human
 - **Status**: IN_PROGRESS
-- **Workflow state**: EDIT
+- **Workflow state**: PUBLICATION
 - **Created**: 2026-08-14
 
 ## Goal and scope
@@ -20,11 +20,11 @@ protected publication process.
 
 ## Acceptance criteria
 
-- [ ] AC-01: `operations/**`, `events/**`, `error/**`, `models/**` and
+- [x] AC-01: `operations/**`, `events/**`, `error/**`, `models/**` and
   `proto/**` have exactly one declared owner: the integration workstream.
-- [ ] AC-02: Existing application, interface, infrastructure and governance
+- [x] AC-02: Existing application, interface, infrastructure and governance
   ownership remains unchanged.
-- [ ] AC-03: The manifest remains schema-valid, and the managed governance gate
+- [x] AC-03: The manifest remains schema-valid, and the managed governance gate
   plus the merge conformance suite pass.
 - [ ] AC-04: The prerequisite is published through exact-head protected review;
   no interactive agent approves or merges its own change.

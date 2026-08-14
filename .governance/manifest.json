@@ -141,7 +141,12 @@
           "Cargo.toml",
           "pom.xml",
           "docs/**",
-          "standard/**"
+          "standard/**",
+          "operations/**",
+          "events/**",
+          "error/**",
+          "models/**",
+          "proto/**"
         ]
       }
     },
