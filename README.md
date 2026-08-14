@@ -15,7 +15,7 @@ python3 standard/conformance.py --all
 Dependency-free. Pins the schema, grammar, tool-binding and rule digests,
 accepts four canonical documents, proves that 21 adversarial mutations reject
 with their declared `MRG-*` code, and checks that the portable rule equations
-agree with this implementation on 8 of them.
+agree with this implementation on 10 of them.
 
 ## The seven dispositions
 
@@ -87,7 +87,24 @@ whole evidence set is non-deterministic must not authorize destruction.
 | `standard/conformance.py` | the disposition and recovery rules, with adversarial proof and DSL parity |
 | `docs/ARCHITECTURE.md` | shapes, dispositions, rules, diagnostics |
 | `docs/LOGIC_FLOW.md` | evidence ordering and the two destruction gates |
+| `docs/AUTONOMOUS_MERGE.md` | who merges, the six preconditions, and why a green pull request still sits |
 | `docs/PLAYBOOK.md` | six real decisions and what each cost to make |
+
+## Who closes a decision
+
+A decision ends in a merge, and the merge is not the deciding agent's to make.
+An interactive agent runs under the identity that pushed the branch: its
+approval would be a self-approval and its merge an unreviewed write. It
+authorizes `request-autonomous-merge`; the validator identity in CI validates at
+the exact head, approves, merges and deletes the branch.
+
+Six conditions gate that, and they live in four places that must agree — the
+validator's repository matrix, its scan configuration, the standing policy
+variables, and the target repository's ruleset. A repository present in one and
+absent from another produces the worst outcome available: green checks, a
+configured reviewer, no error, and a pull request that never merges.
+[`docs/AUTONOMOUS_MERGE.md`](docs/AUTONOMOUS_MERGE.md) carries the checklist and
+the diagnosis order.
 
 ## Why it exists
 

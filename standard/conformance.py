@@ -25,8 +25,8 @@ RULES_PATH = ROOT / "merge-rules.env"
 ENV_DSL_PATH = ROOT / "env_dsl.py"
 ENV_DSL_SOURCE_REVISION = "1d5ed6c"
 ENV_DSL_DIGEST = "5bf2e2b0983f9bbe421278a2eb76f485a5fee4c10cd820a19bfd5d1ac6e2dc24"
-RULES_DIGEST = "b966dd6e3a8cd143df1235d35d6dbc31f6ba716d63ddbdc352217798fbf6ae0a"
-SCHEMA_DIGEST = "6a5d4fe35bd585a4cb9faa6cf36e2696e8072388070bff5efabe13076704324a"
+RULES_DIGEST = "a3d315a892c75eaaaff2d85b659b3e7161579993ec24aa5baec55241a2078173"
+SCHEMA_DIGEST = "f309310b72594df42189d7b5f43b35b6df59d03aef132b83f6481b33cbde98f3"
 GRAMMAR_DIGEST = "8e3aa2cb41ed435a503ae656374e5acd1e202876f9a0dd430d2f64e5b478cd8f"
 BINDINGS_DIGEST = "d20b43eafac91d7ace8d4b126ca8838b0b33e9d68f17d84f4a0a010ecac48abe"
 SCHEMA_FAMILY = "wellmanifest.merge-decision/v1"
@@ -44,7 +44,8 @@ EVIDENCE_KEYS = {
 EVIDENCE_OPTIONAL = {"artifactDigest", "coverage"}
 DECISION_KEYS = {
     "schema", "kind", "decisionId", "candidateId", "disposition", "evidenceIds", "rationale",
-    "supersededBy", "decidedBy", "actionsAuthorized", "destructive", "recoveryRefs", "decidedAt",
+    "supersededBy", "decidedBy", "actionsAuthorized", "executor", "destructive", "recoveryRefs",
+    "decidedAt",
 }
 DECISION_OPTIONAL = {"supersededBy"}
 RECEIPT_KEYS = {
@@ -60,7 +61,12 @@ EVIDENCE_KINDS = {
     "code-liveness", "dependency-evidence", "history-shape", "recoverability",
 }
 PRODUCERS = {"git", "gate", "todo2code", "code2llm", "deconnected", "giton", "human"}
-ACTIONS = {"open-pull-request", "rebuild-history", "delete-branch", "discard-worktree", "record-backlog", "no-action"}
+ACTIONS = {"open-pull-request", "request-autonomous-merge", "merge", "rebuild-history",
+           "delete-branch", "discard-worktree", "record-backlog", "no-action"}
+EXECUTORS = {"interactive-agent", "automated-validator", "owner"}
+# Six conditions an autonomous merge needs; an owner override answers for itself.
+MERGE_PRECONDITIONS = ("in-scan-matrix", "in-scan-config", "ticket-derivable",
+                       "required-checks-green", "approved-at-exact-head", "standing-merge-policy")
 DESTRUCTIVE_ACTIONS = {"delete-branch", "discard-worktree", "rebuild-history"}
 OUTCOMES = {"applied", "partially-applied", "blocked", "abandoned"}
 
@@ -251,6 +257,22 @@ def validate_decision(
     if allowed is not None and not set(actions) <= allowed:
         raise ContractError("MRG-DECISION-001", "this disposition may only authorize effect-free actions")
 
+    if doc["executor"] not in EXECUTORS:
+        raise ContractError("MRG-DECISION-001", "unknown executor")
+    if "merge" in actions:
+        if doc["executor"] == "interactive-agent":
+            raise ContractError(
+                "MRG-MERGE-001",
+                "an interactive agent authorizes request-autonomous-merge, never merge",
+            )
+        if doc["executor"] == "automated-validator":
+            observed = {i["observation"] for i in cited if i["evidenceKind"] == "gate-outcome"}
+            satisfied = {name for name in MERGE_PRECONDITIONS if any(name in text for text in observed)}
+            if satisfied != set(MERGE_PRECONDITIONS):
+                raise ContractError(
+                    "MRG-MERGE-001",
+                    "an autonomous merge must evidence every precondition it depends on",
+                )
     destructive = bool(set(actions) & DESTRUCTIVE_ACTIONS)
     if doc["destructive"] is not destructive:
         raise ContractError("MRG-DECISION-001", "the destructive flag disagrees with the authorized actions")
@@ -352,7 +374,12 @@ def facts_for(
         "FACT_PATCH_RECOVERY": boolean(any(r.startswith("patch:") for r in decision["recoveryRefs"])),
         "FACT_CANDIDATE_RECOVERABLE": boolean(candidate["recoverable"]),
         "FACT_HAS_REPLACEMENT": boolean(decision.get("supersededBy") is not None),
+        "FACT_EXECUTOR": dsl_name(decision["executor"]),
+        "FACT_AUTHORIZES_MERGE": boolean("merge" in decision["actionsAuthorized"]),
     }
+    observed = {i["observation"] for i in cited if i["evidenceKind"] == "gate-outcome"}
+    for name in MERGE_PRECONDITIONS:
+        facts[f"FACT_{dsl_name(name)}"] = boolean(any(name in text for text in observed))
     for kind in sorted(EVIDENCE_KINDS):
         facts[f"FACT_HAS_{dsl_name(kind)}"] = boolean(kind in kinds)
     return facts
@@ -463,7 +490,8 @@ def sample() -> tuple[dict[str, Any], dict[str, dict[str, Any]], dict[str, Any],
         "evidenceIds": ["evidence:gate", "evidence:history", "evidence:intent", "evidence:identity", "evidence:recovery"],
         "rationale": "Intent is still live on the target, but the delivery cannot pass the gate as authored, so the history is rebuilt plan-first with authorship preserved.",
         "decidedBy": "actor://wellmanifest.com/maintainer",
-        "actionsAuthorized": ["rebuild-history", "open-pull-request", "delete-branch"],
+        "actionsAuthorized": ["rebuild-history", "open-pull-request", "request-autonomous-merge", "delete-branch"],
+        "executor": "interactive-agent",
         "destructive": True,
         "recoveryRefs": ["ref:5555555555555555555555555555555555555555"],
         "decidedAt": "2026-08-14T12:30:00Z",
@@ -562,6 +590,14 @@ def run_all() -> dict[str, Any]:
                         lambda d: d.update(recoveryRefs=[])),
         expect_rejected("receipt-not-redacted", "MRG-SECRET-001", check_receipt, receipt,
                         lambda d: d.update(secretsRedacted=False)),
+        expect_rejected("interactive-agent-authorizes-merge", "MRG-MERGE-001", check_decision, decision,
+                        lambda d: d.update(actionsAuthorized=["merge"], destructive=False,
+                                           recoveryRefs=[], executor="interactive-agent")),
+        expect_rejected("autonomous-merge-without-preconditions", "MRG-MERGE-001", check_decision, decision,
+                        lambda d: d.update(actionsAuthorized=["merge"], destructive=False,
+                                           recoveryRefs=[], executor="automated-validator")),
+        expect_rejected("unknown-executor", "MRG-DECISION-001", check_decision, decision,
+                        lambda d: d.update(executor="cron")),
     ]
     # The uncommitted case has its own recovery rule: a git reference is not enough.
     rejected.append(
@@ -595,6 +631,12 @@ def run_all() -> dict[str, Any]:
         ("destructive-without-recovery-ref", lambda d: d.update(recoveryRefs=[])),
         ("destructive-without-recoverability-evidence",
          lambda d: d.update(evidenceIds=["evidence:gate", "evidence:history"])),
+        ("interactive-agent-authorizes-merge",
+         lambda d: d.update(actionsAuthorized=["merge"], destructive=False, recoveryRefs=[],
+                            executor="interactive-agent")),
+        ("autonomous-merge-without-preconditions",
+         lambda d: d.update(actionsAuthorized=["merge"], destructive=False, recoveryRefs=[],
+                            executor="automated-validator")),
         ("advisory-evidence-authorizes-destruction",
          lambda d: d.update(disposition="regressive",
                             evidenceIds=["evidence:hearsay-identity", "evidence:hearsay-recovery"],

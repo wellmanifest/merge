@@ -87,6 +87,9 @@ flowchart TD
   taking their name off it is not.
 - **A receipt cannot exceed its decision.** Executed actions must be a subset
   of what was authorized.
+- **The deciding agent does not merge.** `merge` requires an executor that is
+  not the interactive agent, and an autonomous merge must evidence all six of
+  its preconditions. See [`AUTONOMOUS_MERGE.md`](AUTONOMOUS_MERGE.md).
 
 ## Rules as portable equations
 
@@ -144,6 +147,7 @@ trust root. The `semcod` producers add reach:
 | `MRG-DECISION-001` | The disposition, its evidence obligation, or its authorized actions are invalid. |
 | `MRG-RECOVERY-001` | A destructive decision lacks the artifact that would restore the work. |
 | `MRG-RECEIPT-001` | A receipt executed something the decision never authorized. |
+| `MRG-MERGE-001` | An interactive agent authorized its own merge, or an autonomous merge lacks evidence of a precondition. |
 | `MRG-SECRET-001` | The secret-free rule is violated. |
 | `MRG-CONTRACT-001` | The pinned schema, grammar or binding digests do not match. |
 

@@ -129,7 +129,11 @@
           "type": "array",
           "maxItems": 8,
           "uniqueItems": true,
-          "items": { "enum": ["open-pull-request", "rebuild-history", "delete-branch", "discard-worktree", "record-backlog", "no-action"] }
+          "items": { "enum": ["open-pull-request", "request-autonomous-merge", "merge", "rebuild-history", "delete-branch", "discard-worktree", "record-backlog", "no-action"] }
+        },
+        "executor": {
+          "description": "Who performs the authorized actions. An interactive agent may never authorize `merge` for itself; it authorizes `request-autonomous-merge` and the automated validator identity performs the merge.",
+          "enum": ["interactive-agent", "automated-validator", "owner"]
         },
         "destructive": { "type": "boolean" },
         "recoveryRefs": { "type": "array", "maxItems": 8, "uniqueItems": true, "items": { "$ref": "#/$defs/recoveryRef" } },
@@ -146,7 +150,7 @@
         "kind": { "const": "receipt" },
         "decisionId": { "$ref": "#/$defs/decisionId" },
         "candidateId": { "$ref": "#/$defs/candidateId" },
-        "executedActions": { "type": "array", "maxItems": 8, "uniqueItems": true, "items": { "enum": ["open-pull-request", "rebuild-history", "delete-branch", "discard-worktree", "record-backlog", "no-action"] } },
+        "executedActions": { "type": "array", "maxItems": 8, "uniqueItems": true, "items": { "enum": ["open-pull-request", "request-autonomous-merge", "merge", "rebuild-history", "delete-branch", "discard-worktree", "record-backlog", "no-action"] } },
         "outcome": { "enum": ["applied", "partially-applied", "blocked", "abandoned"] },
         "resultingRefs": { "type": "array", "maxItems": 16, "uniqueItems": true, "items": { "type": "string", "maxLength": 200 } },
         "recoveryRefs": { "type": "array", "maxItems": 8, "uniqueItems": true, "items": { "$ref": "#/$defs/recoveryRef" } },
