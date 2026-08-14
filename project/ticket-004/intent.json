@@ -1,0 +1,124 @@
+{
+  "schema": "new-project.intent/v3",
+  "ticket": "ticket-004",
+  "summary": "Publish CQRS contract source of truth",
+  "workstream": "integration",
+  "classification": {
+    "kind": "FEATURE",
+    "priority": "P1",
+    "origin": "requested"
+  },
+  "allowedPaths": [
+    "operations/**",
+    "events/**",
+    "error/**",
+    "standard/cqrs_conformance.py",
+    "standard/conformance.py",
+    "project/ticket-004/**",
+    "TODO.md",
+    "project/TICKETS.md"
+  ],
+  "forbiddenPaths": [
+    "project/ticket-*/user-*.md",
+    ".governance/**",
+    "models/**",
+    "proto/**",
+    "README.md",
+    "VERSION",
+    "CHANGELOG.md"
+  ],
+  "stacks": [
+    "python"
+  ],
+  "dependsOn": [
+    "ticket-002"
+  ],
+  "conflictsWith": [],
+  "integrationTicket": null,
+  "delivery": {
+    "acceptedBaseSha": "362c47fc2d1f13ecf1601860d934ee42ea4a6ac0",
+    "targetBranch": "main",
+    "outcome": "Publish a closed, dependency-free CQRS reference where operations/index.json is the sole C/Q source of truth and event/error catalogues are cross-reference checked projections.",
+    "nonGoals": [
+      "Do not change adopter-wide new-project policy",
+      "Do not add a runtime event store, broker or protobuf toolchain",
+      "Do not import more than three public error runbooks in this slice",
+      "Do not let transport schemas, events or replay grant authority"
+    ],
+    "complexity": "L",
+    "estimatedMinutes": 30,
+    "budgets": {
+      "maxImplementationFiles": 15,
+      "maxAffectedComponents": 5,
+      "maxPublicInterfaceChanges": 3,
+      "maxRuntimeDependencies": 0
+    },
+    "architecture": {
+      "status": "accepted",
+      "decision": "Keep a single closed operation registry for C/Q semantics and validate event, error and model references as separate non-authoritative catalogues.",
+      "components": [
+        {
+          "name": "operation-registry",
+          "paths": [
+            "operations/**"
+          ]
+        },
+        {
+          "name": "event-catalogue",
+          "paths": [
+            "events/**"
+          ]
+        },
+        {
+          "name": "error-catalogue",
+          "paths": [
+            "error/**"
+          ]
+        },
+        {
+          "name": "cqrs-conformance",
+          "paths": [
+            "standard/cqrs_conformance.py",
+            "standard/conformance.py"
+          ]
+        }
+      ],
+      "responsibilityChanges": false,
+      "interfaceChanges": [
+        "Add wellmanifest.operations/v1",
+        "Add wellmanifest.events/v1",
+        "Add wellmanifest.errors/v1"
+      ],
+      "dataChanges": [
+        "Version the C/Q operation graph",
+        "Version append-only event metadata",
+        "Version public rejection metadata"
+      ],
+      "ui": {
+        "impact": "none",
+        "states": [],
+        "evidence": []
+      },
+      "rollback": "Before merge, revert the ticket branch; after publication, preserve v1 compatibility and publish a corrective versioned registry instead of rewriting recorded semantics."
+    },
+    "runtimeDependencies": [],
+    "validation": [
+      {
+        "criterion": "AC-05",
+        "commands": [
+          "python3 standard/cqrs_conformance.py --all",
+          "python3 standard/conformance.py --all"
+        ],
+        "evidence": "project/ticket-004/ai-codex-logs.txt"
+      },
+      {
+        "criterion": "AC-06",
+        "commands": [
+          "./project/governance-check.sh --actor agent",
+          "git diff --check"
+        ],
+        "evidence": "project/ticket-004/ai-codex-logs.txt"
+      }
+    ]
+  }
+}
