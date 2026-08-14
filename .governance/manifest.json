@@ -1,0 +1,216 @@
+{
+  "$schema": "./manifest.schema.json",
+  "schema": "new-project.governance/v2",
+  "standard": {
+    "id": "wellmanifest/new-project",
+    "version": "0.18.0"
+  },
+  "repository": {
+    "mode": "standalone",
+    "componentRoots": []
+  },
+  "requiredFiles": [
+    "README.md",
+    "VERSION",
+    "CHANGELOG.md",
+    "TODO.md",
+    "AGENTS.md",
+    "project/TICKETS.md",
+    "project/new-ticket.sh",
+    "project/readme.sh"
+  ],
+  "governancePaths": [
+    "TODO.md",
+    "project/TICKETS.md",
+    "project/ticket-*/**"
+  ],
+  "trustedApprovalSources": [
+    "github-review",
+    "github-app-review",
+    "signed-attestation"
+  ],
+  "approvalEvidence": {
+    "schema": "new-project.approval-evidence/v1",
+    "requiredBindings": [
+      "repository",
+      "pullRequest",
+      "headSha",
+      "ticket",
+      "actor"
+    ],
+    "reviewVerificationMethod": "github-api-allowlist",
+    "signedAttestationPredicateType": "https://wellmanifest.dev/attestations/validator/v1"
+  },
+  "ticket": {
+    "root": "project",
+    "directoryPattern": "^ticket-[0-9]{3}$",
+    "requiredFiles": [
+      "README.md",
+      "preprompt.md",
+      "changelog.md",
+      "intent.json"
+    ],
+    "requiredAgentFiles": [
+      "ai-*.md",
+      "ai-*-logs.txt"
+    ],
+    "activeStatuses": [
+      "IN_PROGRESS"
+    ],
+    "nonActiveStatuses": [
+      "BACKLOG",
+      "PLAN",
+      "BLOCKED"
+    ],
+    "closedStatuses": [
+      "DONE",
+      "CANCELLED"
+    ],
+    "implementationStates": [
+      "EDIT",
+      "VALIDATION",
+      "PUBLICATION"
+    ],
+    "intentFile": "intent.json"
+  },
+  "docker": {
+    "required": false,
+    "dockerfiles": [
+      "Dockerfile",
+      "Dockerfile.e2e"
+    ],
+    "composeFiles": [
+      "compose.yml",
+      "compose.yaml",
+      "docker-compose.yml",
+      "docker-compose.yaml",
+      "compose.e2e.yml"
+    ]
+  },
+  "coordination": {
+    "mode": "workstreams",
+    "maxActiveTicketsPerWorkstream": 1,
+    "rejectActiveScopeOverlap": true,
+    "workstreams": {
+      "application": {
+        "ownedPaths": [
+          "src/**",
+          "app/**",
+          "lib/**",
+          "test/**",
+          "tests/**"
+        ]
+      },
+      "interfaces": {
+        "ownedPaths": [
+          "api/**",
+          "sdk/**",
+          "clients/**"
+        ]
+      },
+      "infrastructure": {
+        "ownedPaths": [
+          "Dockerfile*",
+          "compose*.yml",
+          "compose*.yaml",
+          "infra/**"
+        ]
+      },
+      "governance": {
+        "ownedPaths": [
+          ".governance/**",
+          ".github/**",
+          "AGENTS.md",
+          "README.md",
+          "TODO.md",
+          "CHANGELOG.md",
+          ".env.example",
+          "goal.yaml",
+          "project.sh",
+          "project.bat",
+          "project/**",
+          "scripts/runtime.sh"
+        ]
+      },
+      "integration": {
+        "ownedPaths": [
+          "VERSION",
+          "package.json",
+          "pyproject.toml",
+          "go.mod",
+          "Cargo.toml",
+          "pom.xml",
+          "docs/**",
+          "standard/**"
+        ]
+      }
+    },
+    "integration": {
+      "workstream": "integration",
+      "requiredForPaths": [
+        "package.json",
+        "pyproject.toml",
+        "go.mod",
+        "Cargo.toml",
+        "pom.xml"
+      ]
+    }
+  },
+  "delivery": {
+    "requiredForImplementation": true,
+    "maxActiveMinutes": 30,
+    "checkpointMinutes": 25,
+    "allowedComplexityClasses": [
+      "XS",
+      "S",
+      "M",
+      "L"
+    ],
+    "maxImplementationFiles": 15,
+    "maxAffectedComponents": 5,
+    "maxPublicInterfaceChanges": 3,
+    "maxRuntimeDependencies": 3,
+    "profiles": {
+      "XS": {
+        "maxImplementationFiles": 2,
+        "maxAffectedComponents": 1,
+        "maxPublicInterfaceChanges": 0,
+        "maxRuntimeDependencies": 0
+      },
+      "S": {
+        "maxImplementationFiles": 5,
+        "maxAffectedComponents": 2,
+        "maxPublicInterfaceChanges": 1,
+        "maxRuntimeDependencies": 1
+      },
+      "M": {
+        "maxImplementationFiles": 9,
+        "maxAffectedComponents": 3,
+        "maxPublicInterfaceChanges": 2,
+        "maxRuntimeDependencies": 2
+      },
+      "L": {
+        "maxImplementationFiles": 15,
+        "maxAffectedComponents": 5,
+        "maxPublicInterfaceChanges": 3,
+        "maxRuntimeDependencies": 3
+      }
+    },
+    "targetBranches": [
+      "main"
+    ],
+    "publicInterfacePaths": [
+      "api/**",
+      "sdk/**",
+      "src/public/**"
+    ],
+    "dependencyManifestPaths": [
+      "package.json",
+      "pyproject.toml",
+      "go.mod",
+      "Cargo.toml",
+      "pom.xml"
+    ]
+  },
+  "stacks": []
+}
