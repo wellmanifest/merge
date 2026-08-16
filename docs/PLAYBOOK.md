@@ -110,3 +110,36 @@ disposition may authorize only effect-free actions.
 Reaching for the expensive tools first is the common failure. The intent graph
 tells you the shape of a change; it does not tell you whether the change is
 already in the file you are looking at.
+
+## 6. Divergent commercial offer in a parallel worktree → `superseded` or `regressive`
+
+When one worktree carries a live commercial model (example: Basic 97 PLN /
+Operations Plus 59 PLN / Twin Plus) and another ticket rewrites the same
+`plans.json` (or a local offer/brand facade) to a different public sheet, do
+not treat green ticket tests as authority. Ticket AC often moves with the
+rewrite.
+
+Canonical product HOMEs: `subactor/offer` (list prices + site bindings) and
+`subactor/brand` (tokens + vocabulary). `wellmanifest/policy-dsl` owns promo
+qualification only. Portal files are facades.
+
+Evidence to gather:
+
+| Evidence | Producer | What it answers |
+| --- | --- | --- |
+| `intent-delta` | ticket intents + todo2code | Did both claim commercial/brand paths? Was `conflictsWith` empty? |
+| `content-identity` | `subactor/offer` binding + lock + pin-check | Which tuple matches the pinned `offer://subactor/offer/…` digest? |
+| `gate-outcome` | commercial-ssot + brand/vocab gates + governance | Would current main fail the SSOT gate? |
+
+Disposition:
+
+- `superseded` when `subactor/offer` already names the winning offer and the
+  other branch only re-implements an older or alternate price sheet;
+- `regressive` when applying the branch would undo the offer binding or brand
+  profile lock;
+- `rebuild` when the intent is still live but delivery must re-base on the
+  product catalog/profile before touching the portal facade.
+
+Never invent an eighth disposition for "commercial conflict". Never invent a
+second price or brand SSOT inside the portal ticket to "win" the merge.
+
