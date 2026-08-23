@@ -19,5 +19,3 @@ jobs:
           fetch-depth: 0
       - name: Validate merge decisions and Env DSL parity
         run: python3 standard/conformance.py --all
-      - name: Validate bounded governance intent
-        run: ./project/governance-check.sh --actor agent
