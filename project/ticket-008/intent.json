@@ -21,7 +21,7 @@
   "conflictsWith": [],
   "integrationTicket": null,
   "delivery": {
-    "acceptedBaseSha": "c3dc5a760c5d0247db4dcad51157ebd994cac737",
+    "acceptedBaseSha": "b0565e018c1ce76469ce6599af4019b2d4dec870",
     "targetBranch": "main",
     "outcome": "Define Test-Driven Auto-Merge Clause and Green Test Primacy in AUTONOMOUS_MERGE.md and ARCHITECTURE.md to unblock autonomous PR delivery.",
     "nonGoals": [
