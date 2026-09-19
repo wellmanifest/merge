@@ -12,3 +12,4 @@
 - [x] `project/ticket-004` — publish the closed operation registry, append-only
   event catalogue, typed public rejection runbooks and dependency-free CQRS
   cross-reference checker.
+- [ ] `project/ticket-009` — adopt wellmanifest/new-project 0.20.32 governance package and align fleet conformance.
