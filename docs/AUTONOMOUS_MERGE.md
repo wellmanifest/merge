@@ -8,9 +8,9 @@ gate can still sit open.
 
 | Role | May do | May never do |
 | --- | --- | --- |
-| Interactive agent | gather evidence, record a decision, open the pull request, request an autonomous merge, execute a merge the owner explicitly instructed in the session | merge on its own authority, approve its own work, approve through another account or reviewer profile, bypass a ruleset (`--admin`, UI "bypass rules") |
-| Validator identity in CI | validate at exact head, approve, merge, delete the branch | invent authority the standing policy did not grant |
-| Owner | everything, including an explicit administrative override | — |
+| Interactive agent | gather evidence, record a decision, open the pull request, request an autonomous merge | execute a merge, approve its own work, approve through another account or reviewer profile, bypass a ruleset (`--admin`, UI "bypass rules") |
+| Validator identity | validate at exact head, approve, merge, retire a branch with a protected receipt | invent authority the standing policy did not grant |
+| Owner | set policy and resolve intent outside the agent merge workflow | act as the Validator identity in an agent decision |
 
 The split is not a formality. An interactive agent runs under the identity that
 pushed the branch, so its approval would be a self-approval, and its merge would
@@ -23,9 +23,10 @@ defect to route around.
 `merge` therefore is not an action an interactive agent authorizes for itself.
 It authorizes `request-autonomous-merge`; the validator identity authorizes and
 performs `merge`. Green tests are necessary evidence for that merge, not a
-grant of authority to whoever observed them. The owner can still merge, and an
-agent may execute that merge when the owner explicitly instructs it in the
-session; the decision then records `executor: owner`.
+grant of authority to whoever observed them. An instruction from the owner to
+the interactive agent does not turn that agent into an independent Validator.
+The decision model rejects `merge` with `executor: owner` as well as with
+`executor: interactive-agent`.
 
 This matches the normative rules: `RULE_MERGE_EXECUTOR_CONDITION` in
 `standard/merge-rules.env` and `MRG-MERGE-001` in `standard/conformance.py`.
@@ -46,9 +47,12 @@ Record it as the gate observation `required-checks-not-run` and follow event
 - a repository without a OneDev profile or registry entry raises
   `REPOSITORY_NOT_ENROLLED`: the agent opens enrollment tickets and the pull
   request waits;
-- the owner receives a billing notice; delivery does not wait for it. An
-  owner merge on local evidence remains possible (`RULE_CHECKS_NOT_RUN_CONDITION`)
-  but is an incident, not a delivery mode.
+- the owner receives a billing notice. A local test result is diagnostic
+  evidence; it never turns an unrun required context green. If a protected
+  policy has migrated that context to `onedev/local-verify`, the Validator
+  checks the current profile and exact-head/base receipt before merging.
+  Otherwise the PR waits for the required context or a separately reviewed
+  policy change.
 
 The full catalogue of merge events and their autonomous resolutions is in
 [`MERGE_EVENTS.md`](MERGE_EVENTS.md).
