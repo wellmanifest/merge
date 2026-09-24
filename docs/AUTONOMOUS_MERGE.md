@@ -8,21 +8,50 @@ gate can still sit open.
 
 | Role | May do | May never do |
 | --- | --- | --- |
-| Interactive agent | gather evidence, record a decision, open the pull request, request an autonomous merge, perform autonomous merge via admin bypass or KVM reviewer profile rotation when all tests are green | merge with failing tests or unaddressed regressions |
+| Interactive agent | gather evidence, record a decision, open the pull request, request an autonomous merge, execute a merge the owner explicitly instructed in the session | merge on its own authority, approve its own work, approve through another account or reviewer profile, bypass a ruleset (`--admin`, UI "bypass rules") |
 | Validator identity in CI | validate at exact head, approve, merge, delete the branch | invent authority the standing policy did not grant |
 | Owner | everything, including an explicit administrative override | — |
 
-The split ensures safety while preventing artificial delivery freezes. While
-an interactive agent runs under the session identity, when all automated tests,
-checks and linters pass (`all checks passed / exit code 0`) and the PR is
-mergeable, **Prymat Zielonych Testów (Green Tests as Primary Truth)** applies.
-The agent is explicitly authorized under user mandate to mitigate reviewer
-deadlocks via automated KVM reviewer profile rotation (multi-profile CDP switch)
-or administrative token bypass (`gh pr merge --admin`), autonomously merging
-the pull request to release downstream workstreams.
+The split is not a formality. An interactive agent runs under the identity that
+pushed the branch, so its approval would be a self-approval, and its merge would
+be an unreviewed write to a protected branch. Approving through a second
+account or browser profile does not change that: it is the same actor
+presenting itself as an independent reviewer. Sessions that try it should be
+stopped by their own permission boundary — that is the guardrail working, not a
+defect to route around.
 
-`merge` is authorized directly once all verification gates and tests are green.
+`merge` therefore is not an action an interactive agent authorizes for itself.
+It authorizes `request-autonomous-merge`; the validator identity authorizes and
+performs `merge`. Green tests are necessary evidence for that merge, not a
+grant of authority to whoever observed them. The owner can still merge, and an
+agent may execute that merge when the owner explicitly instructs it in the
+session; the decision then records `executor: owner`.
 
+This matches the normative rules: `RULE_MERGE_EXECUTOR_CONDITION` in
+`standard/merge-rules.env` and `MRG-MERGE-001` in `standard/conformance.py`.
+
+## Checks that never ran
+
+A required check that was never executed — the runner was not started
+because of billing or spending limits, no runner matched the label, or the
+workflow was not triggered — is **not green**. It is also not a test failure.
+Record it as the gate observation `required-checks-not-run` and follow event
+`CHECKS_NOT_RUN` in [`MERGE_EVENTS.md`](MERGE_EVENTS.md):
+
+- `subactor/onedev-agent` verifies the exact head merged with the current
+  base and publishes `onedev/local-verify`
+  (see `wellmanifest/new-project` `docs/information/local-ci-publication.md`);
+- the Validator identity then validates, approves and merges
+  (`LOCAL_VERIFY_GREEN`); it never counts a check that did not run;
+- a repository without a OneDev profile or registry entry raises
+  `REPOSITORY_NOT_ENROLLED`: the agent opens enrollment tickets and the pull
+  request waits;
+- the owner receives a billing notice; delivery does not wait for it. An
+  owner merge on local evidence remains possible (`RULE_CHECKS_NOT_RUN_CONDITION`)
+  but is an incident, not a delivery mode.
+
+The full catalogue of merge events and their autonomous resolutions is in
+[`MERGE_EVENTS.md`](MERGE_EVENTS.md).
 
 ## What must be true for a pull request to merge itself
 
@@ -134,12 +163,12 @@ artifacts, not from the workflow's aggregate conclusion alone.
 When remote API tokens encounter GitHub rate limits (`HTTP 403: API rate limit exceeded`
 or secondary rate limits) on GraphQL and REST interfaces:
 1. **No Delivery Stall**: Delivery must not freeze due to token quota exhaustion.
-2. **Authorized Browser CDP Execution**: An authorized agent or runner is authorized
-   to utilize a local authenticated Chromium instance via Chrome DevTools Protocol (CDP,
-   default port 9222). The `BrowserCDPMerger` WebSocket protocol drives the GitHub web UI
-   directly to confirm and finalize merges (`Bypass rules and squash/merge`).
-3. **Receipt Recording**: All merges executed via CDP record provenance (`via: browser_cdp`)
-   and evidence digests in the operational event store.
+2. **Wait, do not route around**: honour `Retry-After` / the reset time and let
+   the next validator scan merge. Driving the GitHub web UI through a browser
+   session to merge is an interactive-agent merge and is not permitted, and
+   "bypass rules" is never an agent action.
+3. **Diagnose per job**: a rate-limited queue job must not suppress the
+   repository scan legs (see above).
 
 ## Automated Rebuild Pipeline for Conflicted Downstream PRs
 

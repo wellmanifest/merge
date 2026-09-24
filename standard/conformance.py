@@ -25,11 +25,13 @@ SCHEMA_PATH = ROOT / "merge-decision.schema.json"
 GRAMMAR_PATH = ROOT / "merge-decision.v1.gbnf"
 BINDINGS_PATH = ROOT / "tool-bindings.json"
 RULES_PATH = ROOT / "merge-rules.env"
+EVENTS_PATH = ROOT / "merge-events.env"
+EVENTS_DOC_PATH = ROOT.parent / "docs" / "MERGE_EVENTS.md"
 OPERATIONS_PATH = ROOT.parent / "operations" / "index.json"
 ENV_DSL_PATH = ROOT / "env_dsl.py"
 ENV_DSL_SOURCE_REVISION = "1d5ed6c"
 ENV_DSL_DIGEST = "5bf2e2b0983f9bbe421278a2eb76f485a5fee4c10cd820a19bfd5d1ac6e2dc24"
-RULES_DIGEST = "a3d315a892c75eaaaff2d85b659b3e7161579993ec24aa5baec55241a2078173"
+RULES_DIGEST = "f73a9ce7387a0e74893a60af4bc70643aafa91750d0f005e225947aa8ccc08ac"
 SCHEMA_DIGEST = "f309310b72594df42189d7b5f43b35b6df59d03aef132b83f6481b33cbde98f3"
 GRAMMAR_DIGEST = "8e3aa2cb41ed435a503ae656374e5acd1e202876f9a0dd430d2f64e5b478cd8f"
 BINDINGS_DIGEST = "d20b43eafac91d7ace8d4b126ca8838b0b33e9d68f17d84f4a0a010ecac48abe"
@@ -71,6 +73,14 @@ EXECUTORS = {"interactive-agent", "automated-validator", "owner"}
 # Six conditions an autonomous merge needs; an owner override answers for itself.
 MERGE_PRECONDITIONS = ("in-scan-matrix", "in-scan-config", "ticket-derivable",
                        "required-checks-green", "approved-at-exact-head", "standing-merge-policy")
+# A required check that was never executed (runner not started, billing,
+# no matching runner) is neither green nor failed. See docs/MERGE_EVENTS.md.
+CHECKS_NOT_RUN = "required-checks-not-run"
+# The resolution matrix in merge-events.env: who acts, and which states exist.
+EVENT_ACTORS = {"INTERACTIVE_AGENT", "ONEDEV_AGENT", "VALIDATOR_AGENT"}
+EVENT_STATES = {"DRAFT", "AWAITING_CHECKS", "AWAITING_LOCAL_VERIFY", "AWAITING_VALIDATOR",
+                "AWAITING_ENROLLMENT", "CHANGES_REQUIRED", "REPLANNING", "SERIALIZED", "MERGED", "CLOSED"}
+EVENT_FIELDS = ("ACTOR", "ACTION", "NEXT", "NOTIFY", "PRIORITY", "BLOCKS_MERGE", "AUTONOMOUS")
 DESTRUCTIVE_ACTIONS = {"delete-branch", "discard-worktree", "rebuild-history"}
 OUTCOMES = {"applied", "partially-applied", "blocked", "abandoned"}
 
@@ -264,6 +274,17 @@ def validate_decision(
     if doc["executor"] not in EXECUTORS:
         raise ContractError("MRG-DECISION-001", "unknown executor")
     if "merge" in actions:
+        gate_outcomes = [i for i in cited if i["evidenceKind"] == "gate-outcome"]
+        if any(CHECKS_NOT_RUN in i["observation"] for i in gate_outcomes):
+            if doc["executor"] != "owner":
+                raise ContractError(
+                    "MRG-MERGE-001", "a required check that never ran is not green; only the owner may merge",
+                )
+            if local_gate_evidence(cited) == 0:
+                raise ContractError(
+                    "MRG-MERGE-001",
+                    "an owner merge without hosted checks must cite deterministic local gate evidence",
+                )
         if doc["executor"] == "interactive-agent":
             raise ContractError(
                 "MRG-MERGE-001",
@@ -357,6 +378,12 @@ def identity_reading(cited: list[dict[str, Any]]) -> tuple[int, int, int]:
     return coverage["total"], coverage["compared"], coverage["matched"]
 
 
+def local_gate_evidence(cited: list[dict[str, Any]]) -> int:
+    """Deterministic gate outcomes that stand in for checks that did not run."""
+    return sum(1 for i in cited if i["evidenceKind"] == "gate-outcome" and i["deterministic"]
+               and CHECKS_NOT_RUN not in i["observation"])
+
+
 def facts_for(
     candidate: dict[str, Any], decision: dict[str, Any], evidence: dict[str, dict[str, Any]]
 ) -> dict[str, str]:
@@ -386,6 +413,8 @@ def facts_for(
     observed = {i["observation"] for i in cited if i["evidenceKind"] == "gate-outcome"}
     for name in MERGE_PRECONDITIONS:
         facts[f"FACT_{dsl_name(name)}"] = boolean(any(name in text for text in observed))
+    facts["FACT_REQUIRED_CHECKS_NOT_RUN"] = boolean(any(CHECKS_NOT_RUN in text for text in observed))
+    facts["FACT_LOCAL_GATE_EVIDENCE_COUNT"] = str(local_gate_evidence(cited))
     for kind in sorted(EVIDENCE_KINDS):
         facts[f"FACT_HAS_{dsl_name(kind)}"] = boolean(kind in kinds)
     return facts
@@ -412,6 +441,90 @@ def dsl_admissible(
     if not isinstance(result, bool):
         raise ContractError("MRG-CONTRACT-001", "admissibility must evaluate to a boolean")
     return result
+
+
+def load_event_matrix(env_dsl: Any) -> tuple[Any, dict[str, str]]:
+    document, diagnostics = env_dsl.parse_file(EVENTS_PATH)
+    if document is None or diagnostics:
+        raise ContractError("MRG-CONTRACT-001", "the event matrix is not valid Env DSL")
+    merged, diagnostics = env_dsl.merge_documents([document])
+    if diagnostics:
+        raise ContractError("MRG-CONTRACT-001", "the event matrix does not merge")
+    return document, merged
+
+
+def evaluate_events(env_dsl: Any, document: Any, merged: dict[str, str], event: str) -> dict[str, Any]:
+    constants = {**merged, "FACT_EVENT": event}
+    values, diagnostics = env_dsl.evaluate_constants(constants, {"ENV_DSL_ENVIRONMENT": document.environment})
+    if diagnostics:
+        raise ContractError("MRG-CONTRACT-001", f"event matrix evaluation reported diagnostics for {event}")
+    return values
+
+
+def validate_event_matrix() -> dict[str, Any]:
+    """Every merge event resolves to exactly one autonomous, non-owner resolution.
+
+    Only the Validator identity may lead to MERGED. The equations prove it for
+    the document; this function additionally proves every event routes once,
+    that mutations breaking an invariant are rejected, and that the human
+    documentation lists the same matrix.
+    """
+    env_dsl = load_env_dsl()
+    document, merged = load_event_matrix(env_dsl)
+    events = sorted(name[len("ROUTE_"):-len("_CONDITION")] for name in merged
+                    if name.startswith("ROUTE_") and name.endswith("_CONDITION"))
+    if not events:
+        raise ContractError("MRG-CONTRACT-001", "the event matrix declares no events")
+    priorities: dict[str, int] = {}
+    for event in events:
+        fields = {field: merged.get(f"EVENT_{event}_{field}") for field in EVENT_FIELDS}
+        if any(value is None for value in fields.values()):
+            raise ContractError("MRG-CONTRACT-001", f"event {event} lacks a resolution field")
+        if fields["ACTOR"] not in EVENT_ACTORS or fields["NEXT"] not in EVENT_STATES:
+            raise ContractError("MRG-CONTRACT-001", f"event {event} names an undeclared actor or state")
+        if fields["NOTIFY"] not in {"NONE", "OWNER"}:
+            raise ContractError("MRG-CONTRACT-001", f"event {event} names an undeclared notice")
+        if fields["NEXT"] == "MERGED" and fields["ACTOR"] != "VALIDATOR_AGENT":
+            raise ContractError("MRG-CONTRACT-001", f"event {event} lets a non-Validator actor merge")
+        priorities[event] = int(fields["PRIORITY"])
+        values = evaluate_events(env_dsl, document, merged, event)
+        routes = [name for name, value in values.items()
+                  if name.startswith("ROUTE_") and name.endswith("_CONDITION") and value is True]
+        if routes != [f"ROUTE_{event}_CONDITION"] or values.get("EVENT_RESOLVED_CONDITION") is not True:
+            raise ContractError("MRG-CONTRACT-001", f"event {event} does not resolve to exactly one route")
+    if len(set(priorities.values())) != len(priorities):
+        raise ContractError("MRG-CONTRACT-001", "event priorities must be unique so concurrent events order deterministically")
+    unknown = evaluate_events(env_dsl, document, merged, "UNDECLARED_EVENT")
+    if unknown.get("EVENT_KNOWN_CONDITION") is not False or unknown.get("EVENT_RESOLVED_CONDITION") is not False:
+        raise ContractError("MRG-CONTRACT-001", "an undeclared event must fail closed")
+
+    sample_event = events[0]
+    mutations = {
+        "interactive-agent-reaches-merged": {f"EVENT_{sample_event}_ACTOR": "INTERACTIVE_AGENT",
+                                             f"EVENT_{sample_event}_NEXT": "MERGED"},
+        "owner-as-actor": {f"EVENT_{sample_event}_ACTOR": "OWNER"},
+        "non-autonomous-resolution": {f"EVENT_{sample_event}_AUTONOMOUS": "FALSE"},
+    }
+    rejected_mutations = []
+    for case, change in mutations.items():
+        values = evaluate_events(env_dsl, document, {**merged, **change}, sample_event)
+        if values.get("EVENT_RESOLVED_CONDITION") is not False:
+            raise AssertionError(f"the event matrix accepted {case}")
+        rejected_mutations.append(case)
+
+    documentation = EVENTS_DOC_PATH.read_text()
+    for event in events:
+        row = f"| {priorities[event]} | `{event}` |"
+        actor, action, next_state = (merged[f"EVENT_{event}_{f}"] for f in ("ACTOR", "ACTION", "NEXT"))
+        line = next((line for line in documentation.splitlines() if line.startswith(row)), None)
+        if line is None or not all(f"`{v}`" in line for v in (actor, action, next_state)):
+            raise ContractError("MRG-CONTRACT-001", f"docs/MERGE_EVENTS.md does not match the matrix for {event}")
+    return {
+        "document": "merge-events.env",
+        "eventsDigest": "sha256:" + digest(EVENTS_PATH.read_bytes()),
+        "events": events,
+        "rejectedMutations": rejected_mutations,
+    }
 
 
 # Which validator answers which command, and which diagnostics the shared
@@ -715,6 +828,48 @@ def run_all() -> dict[str, Any]:
         if dsl_admissible(candidate, mutated, evidence):
             raise AssertionError(f"the rule equations accepted {case}")
         parity.append(case)
+    # Checks that never ran: the Validator may not count them; the owner may
+    # merge only on cited deterministic local gate evidence.
+    not_run_evidence = dict(evidence)
+    for item in (
+        {"evidenceId": "evidence:hosted-not-run", "evidenceKind": "gate-outcome", "producer": "gate",
+         "command": "gh pr checks --required",
+         "observation": "required-checks-not-run: jobs not started (runner unavailable)", "deterministic": True},
+        {"evidenceId": "evidence:claimed-preconditions", "evidenceKind": "gate-outcome", "producer": "gate",
+         "command": "validator preconditions --exact-head",
+         "observation": " ".join(MERGE_PRECONDITIONS), "deterministic": True},
+        {"evidenceId": "evidence:local-tests", "evidenceKind": "gate-outcome", "producer": "gate",
+         "command": "python3 -m pytest -q", "observation": "45 passed at the exact head", "deterministic": True},
+    ):
+        record = {"schema": SCHEMA_FAMILY, "kind": "evidence", "candidateId": candidate["candidateId"],
+                  "observedAt": "2026-09-24T12:00:00Z", **item}
+        not_run_evidence[record["evidenceId"]] = validate_evidence(record, candidate)
+
+    def merge_on(executor: str, ids: list[str]) -> Callable[[dict[str, Any]], None]:
+        return lambda d: d.update(actionsAuthorized=["merge"], destructive=False, recoveryRefs=[],
+                                  executor=executor, evidenceIds=ids)
+
+    not_run_cases = (
+        ("validator-merge-on-checks-not-run",
+         merge_on("automated-validator", ["evidence:hosted-not-run", "evidence:claimed-preconditions", "evidence:history"])),
+        ("owner-merge-on-checks-not-run-without-local-evidence",
+         merge_on("owner", ["evidence:hosted-not-run", "evidence:history"])),
+    )
+    for case, mutation in not_run_cases:
+        rejected.append(expect_rejected(case, "MRG-MERGE-001",
+                                        lambda d: validate_decision(d, candidate, not_run_evidence), decision, mutation))
+        mutated = copy.deepcopy(decision)
+        mutation(mutated)
+        if dsl_admissible(candidate, mutated, not_run_evidence):
+            raise AssertionError(f"the rule equations accepted {case}")
+        parity.append(case)
+    owner_with_evidence = copy.deepcopy(decision)
+    merge_on("owner", ["evidence:hosted-not-run", "evidence:local-tests", "evidence:history"])(owner_with_evidence)
+    validate_decision(owner_with_evidence, candidate, not_run_evidence)
+    if not dsl_admissible(candidate, owner_with_evidence, not_run_evidence):
+        raise AssertionError("the rule equations rejected an owner merge on local evidence")
+    parity.append("owner-merge-on-checks-not-run-with-local-evidence")
+
     staged_decision = copy.deepcopy(decision)
     staged_decision.update(disposition="regressive",
                            evidenceIds=["evidence:identity", "evidence:recovery"],
@@ -741,6 +896,7 @@ def run_all() -> dict[str, Any]:
         "schemaDigest": "sha256:" + SCHEMA_DIGEST,
         "grammarDigest": "sha256:" + GRAMMAR_DIGEST,
         "bindingsDigest": "sha256:" + BINDINGS_DIGEST,
+        "eventMatrix": validate_event_matrix(),
         "cqrs": cqrs_conformance.run_all(),
     }
 
