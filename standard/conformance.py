@@ -285,8 +285,7 @@ def validate_decision(
                 "MRG-MERGE-001",
                 "a required check that never ran is not green",
             )
-        observed = {i["observation"] for i in gate_outcomes}
-        satisfied = {name for name in MERGE_PRECONDITIONS if any(name in text for text in observed)}
+        satisfied = merge_gate_markers(cited)
         if satisfied != set(MERGE_PRECONDITIONS):
             raise ContractError(
                 "MRG-MERGE-001",
@@ -372,6 +371,25 @@ def identity_reading(cited: list[dict[str, Any]]) -> tuple[int, int, int]:
     return coverage["total"], coverage["compared"], coverage["matched"]
 
 
+def merge_gate_markers(cited: list[dict[str, Any]]) -> set[str]:
+    """Read exact affirmative markers from deterministic gate observations.
+
+    Free text, negated assignments and human observations cannot assert a
+    merge precondition. The protected Validator still verifies the actual
+    status source and exact head/base outside this descriptive contract.
+    """
+    allowed = set(MERGE_PRECONDITIONS)
+    markers: set[str] = set()
+    for item in cited:
+        if (item["evidenceKind"] != "gate-outcome" or item["producer"] != "gate"
+                or item["deterministic"] is not True):
+            continue
+        tokens = item["observation"].split()
+        if tokens and set(tokens) <= allowed:
+            markers.update(tokens)
+    return markers
+
+
 def facts_for(
     candidate: dict[str, Any], decision: dict[str, Any], evidence: dict[str, dict[str, Any]]
 ) -> dict[str, str]:
@@ -399,8 +417,9 @@ def facts_for(
         "FACT_AUTHORIZES_MERGE": boolean("merge" in decision["actionsAuthorized"]),
     }
     observed = {i["observation"] for i in cited if i["evidenceKind"] == "gate-outcome"}
+    positive = merge_gate_markers(cited)
     for name in MERGE_PRECONDITIONS:
-        facts[f"FACT_{dsl_name(name)}"] = boolean(any(name in text for text in observed))
+        facts[f"FACT_{dsl_name(name)}"] = boolean(name in positive)
     facts["FACT_REQUIRED_CHECKS_NOT_RUN"] = boolean(any(CHECKS_NOT_RUN in text for text in observed))
     for kind in sorted(EVIDENCE_KINDS):
         facts[f"FACT_HAS_{dsl_name(kind)}"] = boolean(kind in kinds)
@@ -879,6 +898,24 @@ def run_all() -> dict[str, Any]:
     if not dsl_admissible(candidate, validator_with_preconditions, not_run_evidence):
         raise AssertionError("the rule equations rejected a Validator merge with all preconditions")
     parity.append("validator-merge-with-all-preconditions")
+    # The status words must form the entire deterministic gate observation;
+    # a substring, prose assertion or human report cannot make a check green.
+    for case, changes in (
+        ("negated-check-marker", {"observation": " ".join(MERGE_PRECONDITIONS).replace(
+            "required-checks-green", "required-checks-green=false")}),
+        ("prose-check-marker", {"observation": "claimed: " + " ".join(MERGE_PRECONDITIONS)}),
+        ("nondeterministic-check-marker", {"deterministic": False}),
+        ("human-check-marker", {"producer": "human", "deterministic": False}),
+    ):
+        variant = dict(not_run_evidence)
+        record = {**variant["evidence:claimed-preconditions"], **changes}
+        variant[record["evidenceId"]] = validate_evidence(record, candidate)
+        rejected.append(expect_rejected(case, "MRG-MERGE-001",
+                                        lambda d: validate_decision(d, candidate, variant),
+                                        validator_with_preconditions, lambda d: None))
+        if dsl_admissible(candidate, validator_with_preconditions, variant):
+            raise AssertionError(f"the rule equations accepted {case}")
+        parity.append(case)
 
     staged_decision = copy.deepcopy(decision)
     staged_decision.update(disposition="regressive",

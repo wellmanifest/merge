@@ -30,6 +30,11 @@ The decision model rejects `merge` with `executor: owner` as well as with
 
 This matches the normative rules: `RULE_MERGE_EXECUTOR_CONDITION` in
 `standard/merge-rules.env` and `MRG-MERGE-001` in `standard/conformance.py`.
+For a merge decision, preconditions are exact whitespace-separated status
+markers in a deterministic `gate-outcome` produced by `gate`. Free-text prose,
+negated assignments such as `required-checks-green=false`, and human claims
+do not satisfy a precondition. The protected Validator must still verify the
+real status source and bind the result to the current head and base.
 
 ## Checks that never ran
 
@@ -195,4 +200,3 @@ lockouts (`GOV-CONFLICT-001`, `GOV-BRANCH-LIFECYCLE-002`):
 2. **Preventing Governance Collisions**: Active ticket scopes in `.worktrees/` are audited
    by the governance gate. Keeping only the currently active ticket in workspace scope ensures
    unhindered test execution and delivery streaming across the fleet.
-

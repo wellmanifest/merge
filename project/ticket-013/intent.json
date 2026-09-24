@@ -1,0 +1,86 @@
+{
+  "schema": "new-project.intent/v3",
+  "ticket": "ticket-013",
+  "summary": "Reject negated or untrusted merge gate markers",
+  "workstream": "integration",
+  "classification": {
+    "kind": "BUG",
+    "priority": "P1",
+    "origin": "regression"
+  },
+  "allowedPaths": [
+    "project/ticket-013/**",
+    "TODO.md",
+    "project/TICKETS.md",
+    "docs/AUTONOMOUS_MERGE.md",
+    "standard/conformance.py"
+  ],
+  "forbiddenPaths": [
+    "project/ticket-*/user-*.md"
+  ],
+  "stacks": [],
+  "dependsOn": [],
+  "conflictsWith": [],
+  "integrationTicket": null,
+  "delivery": {
+    "acceptedBaseSha": "6a1ea0fbe72159cb0c9e199f7196eb280ad96724",
+    "targetBranch": "main",
+    "outcome": "Merge preconditions count only exact status markers from deterministic gate evidence; negated, prose-only and nondeterministic claims are rejected consistently by Python and Env DSL.",
+    "nonGoals": [
+      "No change to protected Validator runtime policy or check source",
+      "No owner or interactive merge authority"
+    ],
+    "complexity": "S",
+    "estimatedMinutes": 45,
+    "budgets": {
+      "maxImplementationFiles": 2,
+      "maxAffectedComponents": 2,
+      "maxPublicInterfaceChanges": 0,
+      "maxRuntimeDependencies": 0
+    },
+    "architecture": {
+      "status": "accepted",
+      "decision": "Parse exact whitespace-delimited positive gate markers only from deterministic gate-produced evidence, while any cited not-run observation continues to block merge. Use one helper for checker and Env DSL fact projection.",
+      "components": [
+        {
+          "name": "merge-conformance",
+          "paths": [
+            "standard/conformance.py"
+          ]
+        },
+        {
+          "name": "merge-documentation",
+          "paths": [
+            "docs/AUTONOMOUS_MERGE.md"
+          ]
+        }
+      ],
+      "responsibilityChanges": false,
+      "interfaceChanges": [],
+      "dataChanges": [],
+      "ui": {
+        "impact": "none",
+        "states": [],
+        "evidence": []
+      },
+      "rollback": "Revert the ticket commit, retaining the stricter executor and missing-check requirements from ticket-012."
+    },
+    "runtimeDependencies": [],
+    "validation": [
+      {
+        "criterion": "AC-01",
+        "commands": [
+          "python3 standard/conformance.py --all"
+        ],
+        "evidence": "Negative marker mutations rejected in Python and Env DSL; positive Validator case accepted."
+      },
+      {
+        "criterion": "AC-02",
+        "commands": [
+          "./project/governance-check.sh"
+        ],
+        "evidence": "GOV-PASS at exact ticket head."
+      }
+    ]
+  }
+}
