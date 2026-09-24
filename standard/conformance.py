@@ -79,7 +79,8 @@ CHECKS_NOT_RUN = "required-checks-not-run"
 # The resolution matrix in merge-events.env: who acts, and which states exist.
 EVENT_ACTORS = {"INTERACTIVE_AGENT", "ONEDEV_AGENT", "VALIDATOR_AGENT"}
 EVENT_STATES = {"DRAFT", "AWAITING_CHECKS", "AWAITING_LOCAL_VERIFY", "AWAITING_VALIDATOR",
-                "AWAITING_ENROLLMENT", "CHANGES_REQUIRED", "REPLANNING", "SERIALIZED", "MERGED", "CLOSED"}
+                "AWAITING_ENROLLMENT", "AWAITING_OWNER_DECISION", "CHANGES_REQUIRED", "REPLANNING",
+                "SERIALIZED", "MERGED", "CLOSED"}
 EVENT_FIELDS = ("ACTOR", "ACTION", "NEXT", "NOTIFY", "PRIORITY", "BLOCKS_MERGE", "AUTONOMOUS")
 DESTRUCTIVE_ACTIONS = {"delete-branch", "discard-worktree", "rebuild-history"}
 OUTCOMES = {"applied", "partially-applied", "blocked", "abandoned"}
@@ -453,8 +454,9 @@ def load_event_matrix(env_dsl: Any) -> tuple[Any, dict[str, str]]:
     return document, merged
 
 
-def evaluate_events(env_dsl: Any, document: Any, merged: dict[str, str], event: str) -> dict[str, Any]:
-    constants = {**merged, "FACT_EVENT": event}
+def evaluate_events(env_dsl: Any, document: Any, merged: dict[str, str], event: str,
+                    facts: dict[str, str] | None = None) -> dict[str, Any]:
+    constants = {**merged, "FACT_EVENT": event, **(facts or {})}
     values, diagnostics = env_dsl.evaluate_constants(constants, {"ENV_DSL_ENVIRONMENT": document.environment})
     if diagnostics:
         raise ContractError("MRG-CONTRACT-001", f"event matrix evaluation reported diagnostics for {event}")
@@ -487,7 +489,9 @@ def validate_event_matrix() -> dict[str, Any]:
         if fields["NEXT"] == "MERGED" and fields["ACTOR"] != "VALIDATOR_AGENT":
             raise ContractError("MRG-CONTRACT-001", f"event {event} lets a non-Validator actor merge")
         priorities[event] = int(fields["PRIORITY"])
-        values = evaluate_events(env_dsl, document, merged, event)
+        facts = ({"FACT_PROTECTED_MERGE_RECEIPT_MATCHES_BRANCH": "TRUE"}
+                 if event == "ORPHAN_BRANCH" else None)
+        values = evaluate_events(env_dsl, document, merged, event, facts)
         routes = [name for name, value in values.items()
                   if name.startswith("ROUTE_") and name.endswith("_CONDITION") and value is True]
         if routes != [f"ROUTE_{event}_CONDITION"] or values.get("EVENT_RESOLVED_CONDITION") is not True:
@@ -497,6 +501,13 @@ def validate_event_matrix() -> dict[str, Any]:
     unknown = evaluate_events(env_dsl, document, merged, "UNDECLARED_EVENT")
     if unknown.get("EVENT_KNOWN_CONDITION") is not False or unknown.get("EVENT_RESOLVED_CONDITION") is not False:
         raise ContractError("MRG-CONTRACT-001", "an undeclared event must fail closed")
+    unproved_merge = evaluate_events(env_dsl, document, merged, "ORPHAN_BRANCH")
+    if unproved_merge.get("EVENT_RESOLVED_CONDITION") is not False:
+        raise ContractError("MRG-CONTRACT-001", "merged-branch cleanup requires a matching protected merge receipt")
+    contradicted_close = evaluate_events(env_dsl, document, merged, "CLOSED_UNMERGED_PR",
+                                         {"FACT_PROTECTED_MERGE_RECEIPT_MATCHES_BRANCH": "TRUE"})
+    if contradicted_close.get("EVENT_RESOLVED_CONDITION") is not False:
+        raise ContractError("MRG-CONTRACT-001", "closed-unmerged preservation conflicts with a merge receipt")
 
     sample_event = events[0]
     mutations = {
@@ -508,6 +519,15 @@ def validate_event_matrix() -> dict[str, Any]:
     rejected_mutations = []
     for case, change in mutations.items():
         values = evaluate_events(env_dsl, document, {**merged, **change}, sample_event)
+        if values.get("EVENT_RESOLVED_CONDITION") is not False:
+            raise AssertionError(f"the event matrix accepted {case}")
+        rejected_mutations.append(case)
+    for case, change in {
+        "prune-closed-unmerged-branch": {"EVENT_CLOSED_UNMERGED_PR_ACTION": "PRUNE_WITH_RECOVERY_RECEIPT"},
+        "close-without-owner-decision": {"EVENT_CLOSED_UNMERGED_PR_NEXT": "CLOSED"},
+        "prune-without-recovery-receipt": {"EVENT_ORPHAN_BRANCH_ACTION": "PRUNE_MERGED_BRANCH"},
+    }.items():
+        values = evaluate_events(env_dsl, document, {**merged, **change}, "CLOSED_UNMERGED_PR")
         if values.get("EVENT_RESOLVED_CONDITION") is not False:
             raise AssertionError(f"the event matrix accepted {case}")
         rejected_mutations.append(case)

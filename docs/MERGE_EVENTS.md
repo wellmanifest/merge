@@ -1,7 +1,7 @@
 # Merge events and autonomous resolutions
 
-Every situation a pull request can reach on its way to `main` is a closed
-**event** with exactly one autonomous resolution. The normative source is
+Each declared situation a pull request can reach on its way to `main` is a
+closed **event** with one governed resolution. The normative source is
 [`standard/merge-events.env`](../standard/merge-events.env) (Env DSL); this
 table is generated from the same list and `standard/conformance.py` fails when
 they diverge.
@@ -14,9 +14,11 @@ they diverge.
 | `ONEDEV_AGENT` | `subactor/onedev-agent` | verify the exact head merged with the current base (`onedev/local-verify`), consolidate duplicate or superseded tickets, retire merged work by lifecycle |
 | `VALIDATOR_AGENT` | `subactor/validator-agent` App identity | validate at the exact head, approve, merge |
 
-The owner is never an actor. `NOTIFY=OWNER` is an out-of-band notice (billing,
-secret rotation, a Validator incident); delivery does not wait for a reply.
-The interactive agent never merges and never asks a human whether to merge.
+The owner is never an execution actor in this matrix. `NOTIFY=OWNER` is an
+out-of-band notice, not authority to delete or merge. For a closed unmerged PR,
+OneDev preserves the branch autonomously; discarding it later requires the
+owner's explicit decision after intent reconciliation. The interactive agent
+never merges and never asks a human whether to merge.
 
 ## How to resolve
 
@@ -26,6 +28,13 @@ The interactive agent never merges and never asks a human whether to merge.
    holds. An undeclared event fails closed: add it to the matrix first.
 4. The actor performs the action; the pull request moves to the next state.
    Observe again.
+
+`ORPHAN_BRANCH` means a branch left after a verified merge. Its route requires
+`FACT_PROTECTED_MERGE_RECEIPT_MATCHES_BRANCH=TRUE`, supplied by a protected
+controller after binding the merge receipt to the exact branch. Without that
+receipt, cleanup fails closed. A PR closed without merge uses
+`CLOSED_UNMERGED_PR` and keeps its branch while the owner decides whether to
+discard the unmerged work.
 
 ## Matrix
 
@@ -53,7 +62,8 @@ The interactive agent never merges and never asks a human whether to merge.
 | 32 | `BASE_ADVANCED` | The base branch advanced; the pull request still merges cleanly. | `VALIDATOR_AGENT` | `VERIFY_MERGE_RESULT_AGAINST_CURRENT_BASE` | `AWAITING_CHECKS` | `NONE` |
 | 24 | `VALIDATOR_UNAVAILABLE` | The Validator workflow cannot be dispatched or does not start. | `ONEDEV_AGENT` | `QUEUE_REDISPATCH_WITH_BACKOFF_AND_OPEN_INCIDENT` | `AWAITING_VALIDATOR` | `OWNER` |
 | 20 | `RATE_LIMITED` | GitHub API quota is exhausted for the scanning identity. | `VALIDATOR_AGENT` | `WAIT_RETRY_AFTER_THEN_RESCAN` | `AWAITING_VALIDATOR` | `NONE` |
-| 15 | `ORPHAN_BRANCH` | A merged or closed ticket branch still exists. | `ONEDEV_AGENT` | `PRUNE_WITH_RECOVERY_RECEIPT` | `CLOSED` | `NONE` |
+| 16 | `CLOSED_UNMERGED_PR` | A PR closed without merge still has its ticket branch; its intent needs reconciliation. | `ONEDEV_AGENT` | `PRESERVE_BRANCH_AND_RECONCILE_INTENT` | `AWAITING_OWNER_DECISION` | `OWNER` |
+| 15 | `ORPHAN_BRANCH` | A branch remains after a protected merge receipt identifies it. | `ONEDEV_AGENT` | `PRUNE_WITH_RECOVERY_RECEIPT` | `CLOSED` | `NONE` |
 | 12 | `LOCAL_VERIFY_GREEN` | `onedev/local-verify` is green on the exact head merged with the current base. | `VALIDATOR_AGENT` | `VALIDATE_APPROVE_AND_MERGE_EXACT_HEAD` | `MERGED` | `NONE` |
 | 10 | `CHECKS_GREEN` | Every required check passed at the exact head. | `VALIDATOR_AGENT` | `VALIDATE_APPROVE_AND_MERGE_EXACT_HEAD` | `MERGED` | `NONE` |
 | 5 | `MERGED` | The merge is read back on the base branch. | `ONEDEV_AGENT` | `RELEASE_SCOPE_AND_RETIRE_WORKTREE_BY_LIFECYCLE` | `CLOSED` | `NONE` |
@@ -68,6 +78,8 @@ The equations in `merge-events.env` prove, and conformance re-checks:
 - every event routes exactly once and priorities are unique, so concurrent
   events are ordered deterministically;
 - an undeclared event is not resolved.
+- an unmerged branch is preserved; merged-branch cleanup requires a matching
+  protected merge receipt and a recovery receipt.
 
 `merge-rules.env` keeps the decision-level rules: an interactive agent never
 authorizes `merge`, and a check that never ran (`required-checks-not-run`)
