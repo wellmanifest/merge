@@ -1,0 +1,92 @@
+{
+  "schema": "new-project.intent/v3",
+  "ticket": "ticket-011",
+  "summary": "Prevent automatic deletion of branches from closed unmerged pull requests",
+  "workstream": "integration",
+  "classification": {
+    "kind": "BUG",
+    "priority": "P2",
+    "origin": "regression"
+  },
+  "allowedPaths": [
+    "project/ticket-011/**",
+    "TODO.md",
+    "project/TICKETS.md",
+    "docs/MERGE_EVENTS.md",
+    "docs/README.md",
+    "standard/conformance.py",
+    "standard/merge-events.env"
+  ],
+  "forbiddenPaths": [
+    "project/ticket-*/user-*.md"
+  ],
+  "stacks": [],
+  "dependsOn": [],
+  "conflictsWith": [],
+  "integrationTicket": null,
+  "delivery": {
+    "acceptedBaseSha": "7fcd6b6b82f2a41ef21a409e6bd90696fefc66d0",
+    "targetBranch": "main",
+    "outcome": "The event matrix distinguishes a leftover branch after verified merge from a closed unmerged PR and preserves the latter until an explicit owner discard decision.",
+    "nonGoals": [
+      "No automatic deletion of unmerged work",
+      "No change to Validator merge authority or protected registry"
+    ],
+    "complexity": "S",
+    "estimatedMinutes": 45,
+    "budgets": {
+      "maxImplementationFiles": 4,
+      "maxAffectedComponents": 2,
+      "maxPublicInterfaceChanges": 1,
+      "maxRuntimeDependencies": 0
+    },
+    "architecture": {
+      "status": "accepted",
+      "decision": "Split the ambiguous ORPHAN_BRANCH event into verified merged cleanup and closed unmerged preservation; enforce both routes in Env DSL conformance.",
+      "components": [
+        {
+          "name": "merge-event-standard",
+          "paths": [
+            "standard/merge-events.env",
+            "standard/conformance.py"
+          ]
+        },
+        {
+          "name": "merge-event-documentation",
+          "paths": [
+            "docs/MERGE_EVENTS.md",
+            "docs/README.md"
+          ]
+        }
+      ],
+      "responsibilityChanges": false,
+      "interfaceChanges": [
+        "Closed unmerged PR event added to merge event matrix"
+      ],
+      "dataChanges": [],
+      "ui": {
+        "impact": "none",
+        "states": [],
+        "evidence": []
+      },
+      "rollback": "Revert this ticket commit; preserve any unmerged branches and re-evaluate before any deletion."
+    },
+    "runtimeDependencies": [],
+    "validation": [
+      {
+        "criterion": "AC-02",
+        "commands": [
+          "python3 standard/conformance.py --all"
+        ],
+        "evidence": "A mutation that tries to prune a closed unmerged branch is rejected."
+      },
+      {
+        "criterion": "AC-03",
+        "commands": [
+          "./project/governance-check.sh"
+        ],
+        "evidence": "GOV-PASS on the exact ticket branch."
+      }
+    ]
+  }
+}
