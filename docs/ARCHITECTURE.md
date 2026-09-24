@@ -94,10 +94,11 @@ flowchart TD
   taking their name off it is not.
 - **A receipt cannot exceed its decision.** Executed actions must be a subset
   of what was authorized.
-- **The deciding agent may merge autonomously when all tests pass.** Under
-  the Test-Driven Auto-Merge Clause, once automated checks are green and the
-  tree is mergeable, the agent is authorized to unblock delivery via KVM
-  reviewer rotation or admin token bypass. See [`AUTONOMOUS_MERGE.md`](AUTONOMOUS_MERGE.md).
+- **The deciding agent does not merge.** `merge` requires an executor that is
+  not the interactive agent, and an autonomous merge must evidence all six of
+  its preconditions. A required check that never ran is not green
+  (`required-checks-not-run`); only the owner may then merge, on cited
+  deterministic evidence. See [`AUTONOMOUS_MERGE.md`](AUTONOMOUS_MERGE.md).
 
 ## Rules as portable equations
 

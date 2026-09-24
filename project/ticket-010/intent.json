@@ -1,0 +1,95 @@
+{
+  "schema": "new-project.intent/v3",
+  "ticket": "ticket-010",
+  "summary": "Align merge authority with the rules and add checks-not-run state",
+  "workstream": "integration",
+  "classification": {
+    "kind": "SERVICE",
+    "priority": "P2",
+    "origin": "health"
+  },
+  "allowedPaths": [
+    "project/ticket-010/**",
+    "TODO.md",
+    "project/TICKETS.md",
+    "docs/**",
+    "error/**",
+    "standard/**"
+  ],
+  "forbiddenPaths": [
+    "project/ticket-*/user-*.md"
+  ],
+  "stacks": [],
+  "dependsOn": [],
+  "conflictsWith": [],
+  "integrationTicket": null,
+  "delivery": {
+    "acceptedBaseSha": "d514ea17cdd0dda3e3a540779d91ed53951f76b0",
+    "targetBranch": "main",
+    "outcome": "Every merge event resolves autonomously through onedev-agent or validator-agent; only the Validator reaches MERGED; a check that never ran is never green.",
+    "nonGoals": [
+      "No change to the protected direct-pr-registry or Validator runtime",
+      "No new error code or CQRS operation",
+      "No GitHub ruleset or billing change"
+    ],
+    "complexity": "M",
+    "estimatedMinutes": 120,
+    "budgets": {
+      "maxImplementationFiles": 9,
+      "maxAffectedComponents": 2,
+      "maxPublicInterfaceChanges": 0,
+      "maxRuntimeDependencies": 0
+    },
+    "architecture": {
+      "status": "accepted",
+      "decision": "Add merge-events.env as a second normative Env DSL document validated by conformance.py; extend merge-rules.env with RULE_CHECKS_NOT_RUN_CONDITION; align docs with RULE_MERGE_EXECUTOR_CONDITION.",
+      "components": [
+        {
+          "name": "merge-decision-standard",
+          "paths": [
+            "standard/**"
+          ]
+        },
+        {
+          "name": "merge-documentation",
+          "paths": [
+            "docs/**"
+          ]
+        }
+      ],
+      "responsibilityChanges": false,
+      "interfaceChanges": [],
+      "dataChanges": [],
+      "ui": {
+        "impact": "none",
+        "states": [],
+        "evidence": []
+      },
+      "rollback": "Revert the merge commit; merge-rules.env and conformance.py return to the previous pinned RULES_DIGEST together."
+    },
+    "runtimeDependencies": [],
+    "validation": [
+      {
+        "criterion": "AC-02",
+        "commands": [
+          "python3 standard/conformance.py --all"
+        ],
+        "evidence": "eventMatrix: 26 events route once; 3 invariant mutations rejected"
+      },
+      {
+        "criterion": "AC-03",
+        "commands": [
+          "python3 standard/conformance.py --all"
+        ],
+        "evidence": "parityCases include validator/owner not-run cases in checker and equations"
+      },
+      {
+        "criterion": "AC-04",
+        "commands": [
+          "grep -rn 'KVM\\|profile rotation' docs"
+        ],
+        "evidence": "no document grants agent merge or bypass"
+      }
+    ]
+  }
+}
