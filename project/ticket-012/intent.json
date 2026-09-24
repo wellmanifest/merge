@@ -1,0 +1,94 @@
+{
+  "schema": "new-project.intent/v3",
+  "ticket": "ticket-012",
+  "summary": "Require Validator merge authority and verified OneDev fallback",
+  "workstream": "integration",
+  "classification": {
+    "kind": "BUG",
+    "priority": "P1",
+    "origin": "regression"
+  },
+  "allowedPaths": [
+    "project/ticket-012/**",
+    "TODO.md",
+    "project/TICKETS.md",
+    "docs/ARCHITECTURE.md",
+    "docs/AUTONOMOUS_MERGE.md",
+    "standard/conformance.py",
+    "standard/merge-decision.schema.json",
+    "standard/merge-rules.env"
+  ],
+  "forbiddenPaths": [
+    "project/ticket-*/user-*.md"
+  ],
+  "stacks": [],
+  "dependsOn": [],
+  "conflictsWith": [],
+  "integrationTicket": null,
+  "delivery": {
+    "acceptedBaseSha": "1e8549e599d05f20ffe8919fb5fd5a0de2cbce97",
+    "targetBranch": "main",
+    "outcome": "Merge decisions require independent Validator execution and current protected checks; checks that never ran cannot be replaced by arbitrary local tests or an owner-executor claim.",
+    "nonGoals": [
+      "No change to protected Validator registry or deployed OneDev profiles",
+      "No administrative merge or review bypass"
+    ],
+    "complexity": "M",
+    "estimatedMinutes": 90,
+    "budgets": {
+      "maxImplementationFiles": 5,
+      "maxAffectedComponents": 2,
+      "maxPublicInterfaceChanges": 1,
+      "maxRuntimeDependencies": 0
+    },
+    "architecture": {
+      "status": "accepted",
+      "decision": "Remove the owner merge exception from the decision checker and Env DSL, reject missing required checks for all executors, and align canonical documentation.",
+      "components": [
+        {
+          "name": "merge-decision-standard",
+          "paths": [
+            "standard/conformance.py",
+            "standard/merge-rules.env",
+            "standard/merge-decision.schema.json"
+          ]
+        },
+        {
+          "name": "merge-documentation",
+          "paths": [
+            "docs/AUTONOMOUS_MERGE.md",
+            "docs/ARCHITECTURE.md"
+          ]
+        }
+      ],
+      "responsibilityChanges": false,
+      "interfaceChanges": [
+        "Merge action requires automated-validator executor"
+      ],
+      "dataChanges": [],
+      "ui": {
+        "impact": "none",
+        "states": [],
+        "evidence": []
+      },
+      "rollback": "Revert this ticket only after a separately reviewed replacement for protected merge authority."
+    },
+    "runtimeDependencies": [],
+    "validation": [
+      {
+        "criterion": "AC-01",
+        "commands": [
+          "python3 standard/conformance.py --all"
+        ],
+        "evidence": "Owner and interactive merge decisions rejected in both checker and Env DSL."
+      },
+      {
+        "criterion": "AC-04",
+        "commands": [
+          "./project/governance-check.sh"
+        ],
+        "evidence": "GOV-PASS on the exact ticket branch."
+      }
+    ]
+  }
+}

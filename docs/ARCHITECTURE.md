@@ -94,11 +94,12 @@ flowchart TD
   taking their name off it is not.
 - **A receipt cannot exceed its decision.** Executed actions must be a subset
   of what was authorized.
-- **The deciding agent does not merge.** `merge` requires an executor that is
-  not the interactive agent, and an autonomous merge must evidence all six of
-  its preconditions. A required check that never ran is not green
-  (`required-checks-not-run`); only the owner may then merge, on cited
-  deterministic evidence. See [`AUTONOMOUS_MERGE.md`](AUTONOMOUS_MERGE.md).
+- **The deciding agent does not merge.** Only `automated-validator` may
+  authorize `merge`, after validating all six preconditions. An owner request
+  to the interactive agent cannot change its executor identity. A required
+  check that never ran is not green (`required-checks-not-run`), even when
+  local tests pass. OneDev can supply a required status only through the
+  current protected Validator policy. See [`AUTONOMOUS_MERGE.md`](AUTONOMOUS_MERGE.md).
 
 ## Rules as portable equations
 

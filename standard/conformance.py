@@ -31,8 +31,8 @@ OPERATIONS_PATH = ROOT.parent / "operations" / "index.json"
 ENV_DSL_PATH = ROOT / "env_dsl.py"
 ENV_DSL_SOURCE_REVISION = "1d5ed6c"
 ENV_DSL_DIGEST = "5bf2e2b0983f9bbe421278a2eb76f485a5fee4c10cd820a19bfd5d1ac6e2dc24"
-RULES_DIGEST = "f73a9ce7387a0e74893a60af4bc70643aafa91750d0f005e225947aa8ccc08ac"
-SCHEMA_DIGEST = "f309310b72594df42189d7b5f43b35b6df59d03aef132b83f6481b33cbde98f3"
+RULES_DIGEST = "214bbcea8cf7e9d3951864a3423f92eed149394622cbe85fcc575e597f2c470a"
+SCHEMA_DIGEST = "0a122f0c003e4389fc954ae9f5a38dad7e93804b6056bcefe75f97203795a23a"
 GRAMMAR_DIGEST = "8e3aa2cb41ed435a503ae656374e5acd1e202876f9a0dd430d2f64e5b478cd8f"
 BINDINGS_DIGEST = "d20b43eafac91d7ace8d4b126ca8838b0b33e9d68f17d84f4a0a010ecac48abe"
 SCHEMA_FAMILY = "wellmanifest.merge-decision/v1"
@@ -70,7 +70,7 @@ PRODUCERS = {"git", "gate", "todo2code", "code2llm", "deconnected", "giton", "hu
 ACTIONS = {"open-pull-request", "request-autonomous-merge", "merge", "rebuild-history",
            "delete-branch", "discard-worktree", "record-backlog", "no-action"}
 EXECUTORS = {"interactive-agent", "automated-validator", "owner"}
-# Six conditions an autonomous merge needs; an owner override answers for itself.
+# Six conditions the independent Validator must verify before merging.
 MERGE_PRECONDITIONS = ("in-scan-matrix", "in-scan-config", "ticket-derivable",
                        "required-checks-green", "approved-at-exact-head", "standing-merge-policy")
 # A required check that was never executed (runner not started, billing,
@@ -275,30 +275,23 @@ def validate_decision(
     if doc["executor"] not in EXECUTORS:
         raise ContractError("MRG-DECISION-001", "unknown executor")
     if "merge" in actions:
+        if doc["executor"] != "automated-validator":
+            raise ContractError(
+                "MRG-MERGE-001", "only the independent Validator may authorize merge",
+            )
         gate_outcomes = [i for i in cited if i["evidenceKind"] == "gate-outcome"]
         if any(CHECKS_NOT_RUN in i["observation"] for i in gate_outcomes):
-            if doc["executor"] != "owner":
-                raise ContractError(
-                    "MRG-MERGE-001", "a required check that never ran is not green; only the owner may merge",
-                )
-            if local_gate_evidence(cited) == 0:
-                raise ContractError(
-                    "MRG-MERGE-001",
-                    "an owner merge without hosted checks must cite deterministic local gate evidence",
-                )
-        if doc["executor"] == "interactive-agent":
             raise ContractError(
                 "MRG-MERGE-001",
-                "an interactive agent authorizes request-autonomous-merge, never merge",
+                "a required check that never ran is not green",
             )
-        if doc["executor"] == "automated-validator":
-            observed = {i["observation"] for i in cited if i["evidenceKind"] == "gate-outcome"}
-            satisfied = {name for name in MERGE_PRECONDITIONS if any(name in text for text in observed)}
-            if satisfied != set(MERGE_PRECONDITIONS):
-                raise ContractError(
-                    "MRG-MERGE-001",
-                    "an autonomous merge must evidence every precondition it depends on",
-                )
+        observed = {i["observation"] for i in gate_outcomes}
+        satisfied = {name for name in MERGE_PRECONDITIONS if any(name in text for text in observed)}
+        if satisfied != set(MERGE_PRECONDITIONS):
+            raise ContractError(
+                "MRG-MERGE-001",
+                "a Validator merge must evidence every precondition it depends on",
+            )
     destructive = bool(set(actions) & DESTRUCTIVE_ACTIONS)
     if doc["destructive"] is not destructive:
         raise ContractError("MRG-DECISION-001", "the destructive flag disagrees with the authorized actions")
@@ -379,12 +372,6 @@ def identity_reading(cited: list[dict[str, Any]]) -> tuple[int, int, int]:
     return coverage["total"], coverage["compared"], coverage["matched"]
 
 
-def local_gate_evidence(cited: list[dict[str, Any]]) -> int:
-    """Deterministic gate outcomes that stand in for checks that did not run."""
-    return sum(1 for i in cited if i["evidenceKind"] == "gate-outcome" and i["deterministic"]
-               and CHECKS_NOT_RUN not in i["observation"])
-
-
 def facts_for(
     candidate: dict[str, Any], decision: dict[str, Any], evidence: dict[str, dict[str, Any]]
 ) -> dict[str, str]:
@@ -415,7 +402,6 @@ def facts_for(
     for name in MERGE_PRECONDITIONS:
         facts[f"FACT_{dsl_name(name)}"] = boolean(any(name in text for text in observed))
     facts["FACT_REQUIRED_CHECKS_NOT_RUN"] = boolean(any(CHECKS_NOT_RUN in text for text in observed))
-    facts["FACT_LOCAL_GATE_EVIDENCE_COUNT"] = str(local_gate_evidence(cited))
     for kind in sorted(EVIDENCE_KINDS):
         facts[f"FACT_HAS_{dsl_name(kind)}"] = boolean(kind in kinds)
     return facts
@@ -848,8 +834,8 @@ def run_all() -> dict[str, Any]:
         if dsl_admissible(candidate, mutated, evidence):
             raise AssertionError(f"the rule equations accepted {case}")
         parity.append(case)
-    # Checks that never ran: the Validator may not count them; the owner may
-    # merge only on cited deterministic local gate evidence.
+    # Missing required checks block every executor, even with passing local
+    # tests or an observation claiming all other preconditions.
     not_run_evidence = dict(evidence)
     for item in (
         {"evidenceId": "evidence:hosted-not-run", "evidenceKind": "gate-outcome", "producer": "gate",
@@ -872,8 +858,12 @@ def run_all() -> dict[str, Any]:
     not_run_cases = (
         ("validator-merge-on-checks-not-run",
          merge_on("automated-validator", ["evidence:hosted-not-run", "evidence:claimed-preconditions", "evidence:history"])),
-        ("owner-merge-on-checks-not-run-without-local-evidence",
-         merge_on("owner", ["evidence:hosted-not-run", "evidence:history"])),
+        ("validator-merge-on-checks-not-run-with-local-tests",
+         merge_on("automated-validator", ["evidence:hosted-not-run", "evidence:claimed-preconditions", "evidence:local-tests", "evidence:history"])),
+        ("owner-merge-on-checks-not-run-with-local-tests",
+         merge_on("owner", ["evidence:hosted-not-run", "evidence:claimed-preconditions", "evidence:local-tests", "evidence:history"])),
+        ("owner-merge-with-all-preconditions",
+         merge_on("owner", ["evidence:claimed-preconditions", "evidence:history"])),
     )
     for case, mutation in not_run_cases:
         rejected.append(expect_rejected(case, "MRG-MERGE-001",
@@ -883,12 +873,12 @@ def run_all() -> dict[str, Any]:
         if dsl_admissible(candidate, mutated, not_run_evidence):
             raise AssertionError(f"the rule equations accepted {case}")
         parity.append(case)
-    owner_with_evidence = copy.deepcopy(decision)
-    merge_on("owner", ["evidence:hosted-not-run", "evidence:local-tests", "evidence:history"])(owner_with_evidence)
-    validate_decision(owner_with_evidence, candidate, not_run_evidence)
-    if not dsl_admissible(candidate, owner_with_evidence, not_run_evidence):
-        raise AssertionError("the rule equations rejected an owner merge on local evidence")
-    parity.append("owner-merge-on-checks-not-run-with-local-evidence")
+    validator_with_preconditions = copy.deepcopy(decision)
+    merge_on("automated-validator", ["evidence:claimed-preconditions", "evidence:history"])(validator_with_preconditions)
+    validate_decision(validator_with_preconditions, candidate, not_run_evidence)
+    if not dsl_admissible(candidate, validator_with_preconditions, not_run_evidence):
+        raise AssertionError("the rule equations rejected a Validator merge with all preconditions")
+    parity.append("validator-merge-with-all-preconditions")
 
     staged_decision = copy.deepcopy(decision)
     staged_decision.update(disposition="regressive",
