@@ -1,0 +1,71 @@
+{
+  "schema": "new-project.intent/v3",
+  "ticket": "ticket-014",
+  "summary": "Replace unsafe terminal worktree cleanup guidance with owned evidence checks",
+  "workstream": "integration",
+  "classification": {
+    "kind": "BUG",
+    "priority": "P1",
+    "origin": "regression"
+  },
+  "allowedPaths": [
+    "project/ticket-014/**",
+    "TODO.md",
+    "project/TICKETS.md",
+    "docs/AUTONOMOUS_MERGE.md"
+  ],
+  "forbiddenPaths": [
+    "project/ticket-*/user-*.md"
+  ],
+  "stacks": [],
+  "dependsOn": [],
+  "conflictsWith": [],
+  "integrationTicket": null,
+  "delivery": {
+    "acceptedBaseSha": "7e59cdfe6ecf5c51aefc749026d6996e138ae64d",
+    "targetBranch": "main",
+    "outcome": "Replace unconditional forced terminal worktree cleanup with exact ownership, preserved history, clean state, process/lease checks and ordinary Git removal.",
+    "nonGoals": [
+      "No check retirement, merge bypass or foreign worktree cleanup"
+    ],
+    "complexity": "XS",
+    "estimatedMinutes": 10,
+    "budgets": {
+      "maxImplementationFiles": 1,
+      "maxAffectedComponents": 1,
+      "maxPublicInterfaceChanges": 0,
+      "maxRuntimeDependencies": 0
+    },
+    "architecture": {
+      "status": "accepted",
+      "decision": "Replace unconditional forced terminal worktree cleanup with exact ownership, preserved history, clean state, process/lease checks and ordinary Git removal.",
+      "components": [
+        {
+          "name": "protected-publication-contract",
+          "paths": [
+            "docs/AUTONOMOUS_MERGE.md"
+          ]
+        }
+      ],
+      "responsibilityChanges": false,
+      "interfaceChanges": [],
+      "dataChanges": [],
+      "ui": {
+        "impact": "none",
+        "states": [],
+        "evidence": []
+      },
+      "rollback": "Revert exact source through independent protected publication; restore any scoped runtime projection from preserved bytes."
+    },
+    "runtimeDependencies": [],
+    "validation": [
+      {
+        "criterion": "AC-01",
+        "commands": [
+          "./project/governance-check.sh"
+        ],
+        "evidence": "Native conformance or behavioral regression and governance, then independent protected publication."
+      }
+    ]
+  }
+}
