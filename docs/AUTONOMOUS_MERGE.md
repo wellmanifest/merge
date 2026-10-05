@@ -194,9 +194,19 @@ When PRs merge into `main`, adjacent open PRs frequently transition into `mergea
 
 Lingering worktrees and branches from merged or superseded tickets cause cascading governance
 lockouts (`GOV-CONFLICT-001`, `GOV-BRANCH-LIFECYCLE-002`):
-1. **Mandatory Post-Merge Pruning**: When a ticket reaches terminal status (`MERGED`,
-   `SUPERSEDED`, or `DONE`), its dedicated worktree must be immediately removed
-   (`git worktree remove --force`) and its local/remote branch pruned.
-2. **Preventing Governance Collisions**: Active ticket scopes in `.worktrees/` are audited
-   by the governance gate. Keeping only the currently active ticket in workspace scope ensures
-   unhindered test execution and delivery streaming across the fleet.
+1. **Owned terminal cleanup**: A terminal ticket triggers a read-only inventory,
+   not permission to delete every checkout. Bind the independently observed merge
+   or authorized supersession receipt to the exact ticket, HEAD, canonical
+   worktree path and branch. Confirm that the controller has released the lease,
+   no process or IDE is still using that checkout, and its tracked and untracked
+   contents are clean. Preserve unique history and ignored operational evidence
+   in a verified recovery artifact before cleanup.
+2. **Ordinary Git removal**: Remove only that owned, verified worktree with
+   `git worktree remove <exact-path>`. Then remove its released local branch only
+   after verifying reachability from the published target. Observe remote branch
+   retirement separately through the protected delivery receipt. Forced removal,
+   broad pruning and deleting unknown registrations are not automatic remedies.
+3. **Unknown or active state**: Preserve dirty, leased, actively used and legacy
+   checkouts as read-only recovery inventory. Record the exact blocker and next
+   observable action; do not waive concurrency or ownership controls. Run the
+   adopted workspace lifecycle checker through Goal for the terminal audit.
