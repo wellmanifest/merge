@@ -5,3 +5,7 @@
 - [ARCHITECTURE.md](ARCHITECTURE.md) — merge decision model and evidence boundaries.
 - [LOGIC_FLOW.md](LOGIC_FLOW.md) — decision flow.
 - [PLAYBOOK.md](PLAYBOOK.md) — worked recovery cases.
+
+## Decisions
+
+- [decisions/owner-delegated-merge.md](decisions/owner-delegated-merge.md) — proposed: keep Validator-only merge and enroll repositories; owner-delegated profile recorded as an alternative.

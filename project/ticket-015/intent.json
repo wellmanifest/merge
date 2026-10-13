@@ -1,0 +1,79 @@
+{
+  "schema": "new-project.intent/v3",
+  "ticket": "ticket-015",
+  "summary": "Propose owner-delegated merge decision record",
+  "workstream": "integration",
+  "classification": {
+    "kind": "FEATURE",
+    "priority": "P2",
+    "origin": "requested"
+  },
+  "allowedPaths": [
+    "project/ticket-015/**",
+    "TODO.md",
+    "project/TICKETS.md",
+    "docs/README.md",
+    "docs/decisions/**"
+  ],
+  "forbiddenPaths": [
+    "project/ticket-*/user-*.md",
+    "standard/**",
+    "docs/AUTONOMOUS_MERGE.md",
+    "AGENTS.md"
+  ],
+  "stacks": [],
+  "dependsOn": [],
+  "conflictsWith": [],
+  "integrationTicket": null,
+  "delivery": {
+    "acceptedBaseSha": "bf4a8df21a0ad4ef7c6b72446550728b4a4b433d",
+    "targetBranch": "main",
+    "outcome": "A proposed decision record compares Validator-only enrollment, an owner-delegated merge profile and the status quo, with the current rule cited and unchanged.",
+    "nonGoals": [
+      "Change MRG rules, merge-rules.env, conformance code or AUTONOMOUS_MERGE.md",
+      "Change host or workspace AGENTS instructions",
+      "Grant any actor merge authority"
+    ],
+    "complexity": "S",
+    "estimatedMinutes": 20,
+    "budgets": {
+      "maxImplementationFiles": 2,
+      "maxAffectedComponents": 1,
+      "maxPublicInterfaceChanges": 0,
+      "maxRuntimeDependencies": 0
+    },
+    "architecture": {
+      "status": "accepted",
+      "decision": "Documentation-only proposed decision record indexed in docs/README.md; normative rules stay untouched until the owner accepts it through separate tickets.",
+      "components": [
+        {
+          "name": "decision-docs",
+          "paths": [
+            "docs/README.md",
+            "docs/decisions/**"
+          ]
+        }
+      ],
+      "responsibilityChanges": false,
+      "interfaceChanges": [],
+      "dataChanges": [],
+      "ui": {
+        "impact": "none",
+        "states": [],
+        "evidence": []
+      },
+      "rollback": "Close the PR without merge; after publication, mark the record superseded in a new ticket."
+    },
+    "runtimeDependencies": [],
+    "validation": [
+      {
+        "criterion": "AC-04",
+        "commands": [
+          "python3 standard/conformance.py --all",
+          "./project/governance-check.sh"
+        ],
+        "evidence": "project/ticket-015/ai-claude.md"
+      }
+    ]
+  }
+}
