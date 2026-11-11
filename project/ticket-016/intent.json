@@ -1,0 +1,82 @@
+{
+  "schema": "new-project.intent/v3",
+  "ticket": "ticket-016",
+  "summary": "Modularize and harden merge decision and CQRS conformance",
+  "workstream": "integration",
+  "classification": {
+    "kind": "BUG",
+    "priority": "P1",
+    "origin": "regression"
+  },
+  "allowedPaths": [
+    "project/ticket-016/**",
+    "TODO.md",
+    "project/TICKETS.md",
+    "standard/**"
+  ],
+  "forbiddenPaths": [
+    "project/ticket-*/user-*.md"
+  ],
+  "stacks": [],
+  "dependsOn": [],
+  "conflictsWith": [],
+  "integrationTicket": null,
+  "delivery": {
+    "acceptedBaseSha": "efd04397b7a1310856f4ded503925e7191e75764",
+    "targetBranch": "main",
+    "outcome": "Split standard/conformance.py (960 lines) and compact standard/cqrs_conformance.py (536 lines) so every owned module is strictly below 500 lines while keeping vendored standard/env_dsl.py digest-pinned; fix KeyError on omitted optional headRevision, bool-as-int acceptance, unhashable list item TypeError crashes, missing JSON Schema field/length/timestamp checks, inline bearer/private-key secret values, duplicate JSON keys, and symlink traversal.",
+    "nonGoals": [
+      "Do not modify digest-pinned vendored standard/env_dsl.py or breaking public conformance CLI/API."
+    ],
+    "complexity": "S",
+    "estimatedMinutes": 30,
+    "budgets": {
+      "maxImplementationFiles": 5,
+      "maxAffectedComponents": 2,
+      "maxPublicInterfaceChanges": 0,
+      "maxRuntimeDependencies": 0
+    },
+    "architecture": {
+      "status": "accepted",
+      "decision": "Decompose standard/conformance.py into merge_contracts.py, merge_dsl_events.py, merge_adversarial.py, and conformance.py (<500 lines each) and compact standard/cqrs_conformance.py (<500 lines) while preserving full public re-exports and AST rejection-surface verification.",
+      "components": [
+        {
+          "name": "merge-decision-conformance",
+          "paths": [
+            "standard/conformance.py",
+            "standard/merge_contracts.py",
+            "standard/merge_dsl_events.py",
+            "standard/merge_adversarial.py"
+          ]
+        },
+        {
+          "name": "merge-cqrs-conformance",
+          "paths": [
+            "standard/cqrs_conformance.py"
+          ]
+        }
+      ],
+      "responsibilityChanges": false,
+      "interfaceChanges": [],
+      "dataChanges": [],
+      "ui": {
+        "impact": "none",
+        "states": [],
+        "evidence": []
+      },
+      "rollback": "Revert the ticket-016 commit on main."
+    },
+    "runtimeDependencies": [],
+    "validation": [
+      {
+        "criterion": "AC-01",
+        "commands": [
+          "python3 standard/conformance.py --all",
+          "python3 standard/cqrs_conformance.py --all",
+          "./project/governance-check.sh"
+        ],
+        "evidence": "Merge decision conformance, CQRS conformance, <500-line checks, and governance checks pass."
+      }
+    ]
+  }
+}
