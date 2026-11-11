@@ -1,5 +1,5 @@
-#!/usr/bin/env python3
 """Dependency-free CQRS registry conformance for the merge standard."""
+
 from __future__ import annotations
 
 import argparse
@@ -7,8 +7,9 @@ import copy
 import hashlib
 import json
 import re
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 OPERATIONS_PATH = ROOT / "operations/index.json"
@@ -17,15 +18,8 @@ EVENTS_PATH = ROOT / "events/index.json"
 ERRORS_PATH = ROOT / "error/index.json"
 
 OPERATIONS_KEYS = {
-    "$schema",
-    "schema",
-    "domain",
-    "sourceOfTruth",
-    "invariants",
-    "models",
-    "commands",
-    "queries",
-    "projections",
+    "$schema", "schema", "domain", "sourceOfTruth", "invariants",
+    "models", "commands", "queries", "projections",
 }
 SOURCE_KEYS = {"commandsAndQueries", "events", "errors", "models", "transportRule"}
 INVARIANT_KEYS = {
@@ -37,52 +31,23 @@ INVARIANT_KEYS = {
 }
 MODEL_KEYS = {"id", "schemaRef", "transport", "authority"}
 COMMAND_KEYS = {
-    "id",
-    "uri",
-    "intent",
-    "inputModel",
-    "authority",
-    "inputCarriesAuthority",
-    "idempotency",
-    "effect",
-    "emits",
-    "rejects",
+    "id", "uri", "intent", "inputModel", "authority",
+    "inputCarriesAuthority", "idempotency", "effect", "emits", "rejects",
 }
 QUERY_KEYS = {
-    "id",
-    "uri",
-    "intent",
-    "inputModel",
-    "outputModel",
-    "cardinality",
-    "projection",
-    "consistency",
-    "effect",
-    "emits",
+    "id", "uri", "intent", "inputModel", "outputModel",
+    "cardinality", "projection", "consistency", "effect", "emits",
 }
-PROJECTION_KEYS = {
-    "id",
-    "intent",
-    "outputModel",
-    "cardinality",
-    "rebuiltFrom",
-    "reducer",
-}
+PROJECTION_KEYS = {"id", "intent", "outputModel", "cardinality", "rebuiltFrom", "reducer"}
 REDUCER_KEYS = {"version", "deterministic", "effects"}
 EVENTS_KEYS = {"schema", "domain", "sourceOfTruth", "immutability", "events"}
 IMMUTABILITY_KEYS = {"appendOnly", "eventsCarryAuthority", "replayExecutesEffects"}
-EVENT_KEYS = {
-    "id",
-    "emittedBy",
-    "payloadFields",
-    "documentation",
-    "authority",
-    "replay",
-}
+EVENT_KEYS = {"id", "emittedBy", "payloadFields", "documentation", "authority", "replay"}
 REPLAY_KEYS = {"deterministic", "effects"}
 ERRORS_KEYS = {"schema", "domain", "sourceOfTruth", "errors"}
 ERROR_KEYS = {"code", "documentation", "retryability", "status", "rejectionEvent"}
 STATUS_KEYS = {"http", "grpc"}
+CARDINALITIES = {"one", "one-or-none", "many"}
 
 ID_PATTERN = re.compile(r"^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)+$")
 COMMAND_URI_PATTERN = re.compile(r"^urn:wellmanifest:[a-z0-9-]+:command:[a-z0-9-]+$")
@@ -98,10 +63,29 @@ class CQRSContractError(ValueError):
         self.code = code
 
 
+def _reject_symlink_chain(path: Path, code: str = "CQRS-DOC-001") -> None:
+    cur = Path(path.anchor) if path.is_absolute() else Path()
+    parts = path.parts[1:] if path.is_absolute() else path.parts
+    for part in parts:
+        cur = cur / part
+        if cur.is_symlink():
+            raise CQRSContractError(code, "symlinked contract file is forbidden")
+
+
 def load_json(path: Path) -> dict[str, Any]:
+    _reject_symlink_chain(path)
+
+    def _no_dups(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        for key, val in pairs:
+            if key in out:
+                raise CQRSContractError("CQRS-DOC-001", "duplicate JSON key in contract")
+            out[key] = val
+        return out
+
     try:
-        value = json.loads(path.read_text())
-    except (OSError, json.JSONDecodeError) as error:
+        value = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=_no_dups)
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
         raise CQRSContractError("CQRS-DOC-001", "contract JSON is unreadable") from error
     if not isinstance(value, dict):
         raise CQRSContractError("CQRS-DOC-001", "contract root must be an object")
@@ -115,7 +99,7 @@ def exact(value: Any, keys: set[str], code: str, label: str) -> dict[str, Any]:
 
 
 def records(value: Any, code: str, label: str) -> list[dict[str, Any]]:
-    if not isinstance(value, list) or not value or not all(isinstance(item, dict) for item in value):
+    if not isinstance(value, list) or not value or not all(isinstance(i, dict) for i in value):
         raise CQRSContractError(code, f"{label} must be a nonempty object list")
     return value
 
@@ -130,7 +114,9 @@ def unique(records_value: list[dict[str, Any]], field: str, code: str) -> dict[s
     return result
 
 
-def unique_strings(value: Any, code: str, label: str, *, allow_empty: bool = False) -> list[str]:
+def unique_strings(
+    value: Any, code: str, label: str, *, allow_empty: bool = False
+) -> list[str]:
     if not isinstance(value, list) or (not allow_empty and not value):
         raise CQRSContractError(code, f"{label} must be a unique string list")
     if not all(isinstance(item, str) and item for item in value) or len(value) != len(set(value)):
@@ -138,7 +124,13 @@ def unique_strings(value: Any, code: str, label: str, *, allow_empty: bool = Fal
     return value
 
 
+def _nonempty_str(value: Any, code: str, label: str) -> None:
+    if not isinstance(value, str) or not value.strip():
+        raise CQRSContractError(code, f"{label} must be a nonempty string")
+
+
 def inside_root(path: Path) -> Path:
+    _reject_symlink_chain(path, "CQRS-REF-001")
     resolved = path.resolve()
     try:
         resolved.relative_to(ROOT.resolve())
@@ -162,16 +154,18 @@ def resolve_schema_ref(reference: str) -> None:
             raise CQRSContractError("CQRS-MODEL-001", "model JSON Pointer does not resolve")
         current = current[part]
     if not isinstance(current, dict):
-        raise CQRSContractError("CQRS-MODEL-001", "model JSON Pointer must resolve to an object schema")
+        raise CQRSContractError("CQRS-MODEL-001", "model JSON Pointer must resolve to an object")
 
 
-def require_document(path_value: str, expected: str, snippets: tuple[str, ...], code: str) -> None:
-    if path_value != expected:
+def require_document(
+    path_value: Any, expected: str, snippets: tuple[str, ...], code: str
+) -> None:
+    if not isinstance(path_value, str) or path_value != expected:
         raise CQRSContractError(code, "documentation path does not match the stable identifier")
     path = inside_root(ROOT / path_value)
     try:
-        text = path.read_text()
-    except OSError as error:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as error:
         raise CQRSContractError(code, "documentation file is missing") from error
     if any(snippet not in text for snippet in snippets):
         raise CQRSContractError(code, "documentation skeleton is incomplete")
@@ -197,6 +191,7 @@ def validate_documents(
         raise CQRSContractError("CQRS-DOC-001", "operation registry schema reference is wrong")
     if operations["schema"] != "wellmanifest.operations/v1":
         raise CQRSContractError("CQRS-DOC-001", "operation registry family is wrong")
+    _nonempty_str(operations["domain"], "CQRS-DOC-001", "domain")
 
     source = exact(operations["sourceOfTruth"], SOURCE_KEYS, "CQRS-DOC-001", "sourceOfTruth")
     if source["commandsAndQueries"] != "operations/index.json":
@@ -207,14 +202,13 @@ def validate_documents(
         raise CQRSContractError("CQRS-MODEL-001", "transport authority boundary is missing")
 
     invariants = exact(operations["invariants"], INVARIANT_KEYS, "CQRS-DOC-001", "invariants")
-    expected_invariants = {
+    if invariants != {
         "commandEffectsBecomeFactsOnlyThroughEvents": True,
         "queriesAreEffectFree": True,
         "replayExecutesEffects": False,
         "eventsCarryAuthority": False,
         "modelsCarryAuthority": False,
-    }
-    if invariants != expected_invariants:
+    }:
         raise CQRSContractError("CQRS-DOC-001", "CQRS invariants are unsafe")
 
     model_records = records(operations["models"], "CQRS-MODEL-001", "models")
@@ -232,7 +226,12 @@ def validate_documents(
     command_uris: set[str] = set()
     for command in command_records:
         exact(command, COMMAND_KEYS, "CQRS-COMMAND-001", "command")
-        if not ID_PATTERN.fullmatch(command["id"]) or not COMMAND_URI_PATTERN.fullmatch(command["uri"]):
+        _nonempty_str(command["intent"], "CQRS-COMMAND-001", "command intent")
+        if (
+            not ID_PATTERN.fullmatch(command["id"])
+            or not isinstance(command["uri"], str)
+            or not COMMAND_URI_PATTERN.fullmatch(command["uri"])
+        ):
             raise CQRSContractError("CQRS-COMMAND-001", "command id or URI is invalid")
         if command["uri"] in command_uris:
             raise CQRSContractError("CQRS-COMMAND-001", "command URI is duplicated")
@@ -250,26 +249,21 @@ def validate_documents(
         unique_strings(command["emits"], "CQRS-COMMAND-001", "command emits")
         unique_strings(command["rejects"], "CQRS-COMMAND-001", "command rejects")
 
-    projection_records = records(
-        operations["projections"], "CQRS-PROJECTION-001", "projections"
-    )
+    projection_records = records(operations["projections"], "CQRS-PROJECTION-001", "projections")
     projections = unique(projection_records, "id", "CQRS-PROJECTION-001")
     for projection in projection_records:
         exact(projection, PROJECTION_KEYS, "CQRS-PROJECTION-001", "projection")
+        _nonempty_str(projection["intent"], "CQRS-PROJECTION-001", "projection intent")
         if not ID_PATTERN.fullmatch(projection["id"]):
             raise CQRSContractError("CQRS-PROJECTION-001", "projection id is invalid")
         if projection["outputModel"] not in models:
             raise CQRSContractError("CQRS-MODEL-001", "projection output model is unknown")
-        if projection["cardinality"] not in {"one", "one-or-none", "many"}:
+        if projection["cardinality"] not in CARDINALITIES:
             raise CQRSContractError("CQRS-PROJECTION-001", "projection cardinality is invalid")
-        unique_strings(
-            projection["rebuiltFrom"], "CQRS-PROJECTION-001", "projection events"
-        )
-        reducer = exact(
-            projection["reducer"], REDUCER_KEYS, "CQRS-PROJECTION-001", "reducer"
-        )
+        unique_strings(projection["rebuiltFrom"], "CQRS-PROJECTION-001", "projection events")
+        reducer = exact(projection["reducer"], REDUCER_KEYS, "CQRS-PROJECTION-001", "reducer")
         if (
-            not isinstance(reducer["version"], int)
+            type(reducer["version"]) is not int
             or reducer["version"] < 1
             or reducer["deterministic"] is not True
             or reducer["effects"] is not False
@@ -281,7 +275,12 @@ def validate_documents(
     query_uris: set[str] = set()
     for query in query_records:
         exact(query, QUERY_KEYS, "CQRS-QUERY-001", "query")
-        if not ID_PATTERN.fullmatch(query["id"]) or not QUERY_URI_PATTERN.fullmatch(query["uri"]):
+        _nonempty_str(query["intent"], "CQRS-QUERY-001", "query intent")
+        if (
+            not ID_PATTERN.fullmatch(query["id"])
+            or not isinstance(query["uri"], str)
+            or not QUERY_URI_PATTERN.fullmatch(query["uri"])
+        ):
             raise CQRSContractError("CQRS-QUERY-001", "query id or URI is invalid")
         if query["uri"] in query_uris:
             raise CQRSContractError("CQRS-QUERY-001", "query URI is duplicated")
@@ -290,6 +289,11 @@ def validate_documents(
             raise CQRSContractError("CQRS-MODEL-001", "query model is unknown")
         if query["projection"] not in projections:
             raise CQRSContractError("CQRS-PROJECTION-001", "query projection is unknown")
+        if (
+            query["cardinality"] not in CARDINALITIES
+            or query["cardinality"] != projections[query["projection"]]["cardinality"]
+        ):
+            raise CQRSContractError("CQRS-QUERY-001", "query cardinality disagrees with projection")
         if query["consistency"] not in {"strong", "eventual"}:
             raise CQRSContractError("CQRS-QUERY-001", "query consistency is invalid")
         if query["effect"] != "none" or query["emits"] != []:
@@ -304,9 +308,7 @@ def validate_documents(
         or events["sourceOfTruth"] != "operations/index.json"
     ):
         raise CQRSContractError("CQRS-EVENT-001", "event catalogue binding is wrong")
-    immutability = exact(
-        events["immutability"], IMMUTABILITY_KEYS, "CQRS-EVENT-001", "immutability"
-    )
+    immutability = exact(events["immutability"], IMMUTABILITY_KEYS, "CQRS-EVENT-001", "immutability")
     if immutability != {
         "appendOnly": True,
         "eventsCarryAuthority": False,
@@ -333,11 +335,9 @@ def validate_documents(
         )
         if event["id"] not in commands[event["emittedBy"]]["emits"]:
             raise CQRSContractError("CQRS-EVENT-001", "event emitter relation is inconsistent")
-    emitted = {item for command in command_records for item in command["emits"]}
-    if emitted != set(event_map):
+    if {item for cmd in command_records for item in cmd["emits"]} != set(event_map):
         raise CQRSContractError("CQRS-EVENT-001", "emitted event is missing or orphaned")
-    rebuilt = {item for projection in projection_records for item in projection["rebuiltFrom"]}
-    if rebuilt != set(event_map):
+    if {item for proj in projection_records for item in proj["rebuiltFrom"]} != set(event_map):
         raise CQRSContractError("CQRS-PROJECTION-001", "event is absent from projection rebuilds")
 
     exact(errors, ERRORS_KEYS, "CQRS-ERROR-001", "error catalogue")
@@ -349,28 +349,28 @@ def validate_documents(
         raise CQRSContractError("CQRS-ERROR-001", "error catalogue binding is wrong")
     error_records = records(errors["errors"], "CQRS-ERROR-001", "errors")
     error_map = unique(error_records, "code", "CQRS-ERROR-001")
-    for error in error_records:
-        exact(error, ERROR_KEYS, "CQRS-ERROR-001", "error")
-        if not ERROR_PATTERN.fullmatch(error["code"]):
+    for err in error_records:
+        exact(err, ERROR_KEYS, "CQRS-ERROR-001", "error")
+        if not ERROR_PATTERN.fullmatch(err["code"]):
             raise CQRSContractError("CQRS-ERROR-001", "error code is invalid")
-        if error["retryability"] not in {"never", "after-correction", "after-new-evidence"}:
+        if err["retryability"] not in {"never", "after-correction", "after-new-evidence"}:
             raise CQRSContractError("CQRS-ERROR-001", "error retryability is invalid")
-        status = exact(error["status"], STATUS_KEYS, "CQRS-ERROR-001", "error status")
-        if not isinstance(status["http"], int) or status["grpc"] not in {
-            "INVALID_ARGUMENT",
-            "FAILED_PRECONDITION",
-        }:
+        status = exact(err["status"], STATUS_KEYS, "CQRS-ERROR-001", "error status")
+        if (
+            type(status["http"]) is not int
+            or not (400 <= status["http"] <= 599)
+            or status["grpc"] not in {"INVALID_ARGUMENT", "FAILED_PRECONDITION"}
+        ):
             raise CQRSContractError("CQRS-ERROR-001", "error status mapping is invalid")
-        if error["rejectionEvent"] not in event_map:
+        if err["rejectionEvent"] not in event_map:
             raise CQRSContractError("CQRS-ERROR-001", "error rejection event is unknown")
         require_document(
-            error["documentation"],
-            f"error/{error['code']}.md",
+            err["documentation"],
+            f"error/{err['code']}.md",
             ("**Meaning.**", "## What raises it", "## Why the rule exists", "## How to resolve it"),
             "CQRS-ERROR-001",
         )
-    rejected = {item for command in command_records for item in command["rejects"]}
-    if rejected != set(error_map):
+    if {item for cmd in command_records for item in cmd["rejects"]} != set(error_map):
         raise CQRSContractError("CQRS-ERROR-001", "public command rejection is missing or orphaned")
 
     used_models = {
@@ -412,7 +412,9 @@ def expect_rejected(
         validate_documents(operation_copy, event_copy, error_copy)
     except CQRSContractError as error:
         if error.code != code:
-            raise AssertionError(f"{name} rejected with {error.code}, expected {code}") from error
+            raise AssertionError(
+                f"{name} rejected with {error.code}, expected {code}"
+            ) from error
         return {"case": name, "code": code}
     raise AssertionError(f"adversarial case accepted: {name}")
 
@@ -423,94 +425,34 @@ def run_all() -> dict[str, Any]:
     events = load_json(EVENTS_PATH)
     errors = load_json(ERRORS_PATH)
     counts = validate_documents(operations, events, errors)
-    rejected = [
-        expect_rejected(
-            "duplicate-command-id",
-            "CQRS-COMMAND-001",
-            operations,
-            events,
-            errors,
-            lambda operation, _event, _error: operation["commands"].append(
-                copy.deepcopy(operation["commands"][0])
-            ),
-        ),
-        expect_rejected(
-            "query-declares-effect",
-            "CQRS-QUERY-001",
-            operations,
-            events,
-            errors,
-            lambda operation, _event, _error: operation["queries"][0].update(
-                effect="append-events"
-            ),
-        ),
-        expect_rejected(
-            "query-emits-event",
-            "CQRS-QUERY-001",
-            operations,
-            events,
-            errors,
-            lambda operation, _event, _error: operation["queries"][0].update(
-                emits=["merge.candidate.recorded"]
-            ),
-        ),
-        expect_rejected(
-            "broken-model-pointer",
-            "CQRS-MODEL-001",
-            operations,
-            events,
-            errors,
-            lambda operation, _event, _error: operation["models"][0].update(
-                schemaRef="../standard/merge-decision.schema.json#/$defs/missing"
-            ),
-        ),
-        expect_rejected(
-            "replay-executes-effects",
-            "CQRS-EVENT-001",
-            operations,
-            events,
-            errors,
-            lambda _operation, event, _error: event["events"][0]["replay"].update(effects=True),
-        ),
-        expect_rejected(
-            "event-emitter-disagrees",
-            "CQRS-EVENT-001",
-            operations,
-            events,
-            errors,
-            lambda _operation, event, _error: event["events"][0].update(
-                emittedBy="merge.evidence.observe"
-            ),
-        ),
-        expect_rejected(
-            "projection-omits-event",
-            "CQRS-PROJECTION-001",
-            operations,
-            events,
-            errors,
-            lambda operation, _event, _error: operation["projections"][1]["rebuiltFrom"].pop(),
-        ),
-        expect_rejected(
-            "duplicate-error-code",
-            "CQRS-ERROR-001",
-            operations,
-            events,
-            errors,
-            lambda _operation, _event, error: error["errors"].append(
-                copy.deepcopy(error["errors"][0])
-            ),
-        ),
-        expect_rejected(
-            "unregistered-command-rejection",
-            "CQRS-ERROR-001",
-            operations,
-            events,
-            errors,
-            lambda operation, _event, _error: operation["commands"][0]["rejects"].append(
-                "MRG-UNKNOWN-001"
-            ),
-        ),
-    ]
+    cases: tuple[tuple[str, str, Callable[[dict[str, Any], dict[str, Any], dict[str, Any]], None]], ...] = (
+        ("duplicate-command-id", "CQRS-COMMAND-001",
+         lambda op, _ev, _er: op["commands"].append(copy.deepcopy(op["commands"][0]))),
+        ("query-declares-effect", "CQRS-QUERY-001",
+         lambda op, _ev, _er: op["queries"][0].update(effect="append-events")),
+        ("query-emits-event", "CQRS-QUERY-001",
+         lambda op, _ev, _er: op["queries"][0].update(emits=["merge.candidate.recorded"])),
+        ("query-cardinality-disagrees", "CQRS-QUERY-001",
+         lambda op, _ev, _er: op["queries"][0].update(cardinality="many")),
+        ("broken-model-pointer", "CQRS-MODEL-001",
+         lambda op, _ev, _er: op["models"][0].update(
+             schemaRef="../standard/merge-decision.schema.json#/$defs/missing")),
+        ("replay-executes-effects", "CQRS-EVENT-001",
+         lambda _op, ev, _er: ev["events"][0]["replay"].update(effects=True)),
+        ("event-emitter-disagrees", "CQRS-EVENT-001",
+         lambda _op, ev, _er: ev["events"][0].update(emittedBy="merge.evidence.observe")),
+        ("projection-omits-event", "CQRS-PROJECTION-001",
+         lambda op, _ev, _er: op["projections"][1]["rebuiltFrom"].pop()),
+        ("projection-bool-reducer-version", "CQRS-PROJECTION-001",
+         lambda op, _ev, _er: op["projections"][0]["reducer"].update(version=True)),
+        ("duplicate-error-code", "CQRS-ERROR-001",
+         lambda _op, _ev, er: er["errors"].append(copy.deepcopy(er["errors"][0]))),
+        ("error-bool-http-status", "CQRS-ERROR-001",
+         lambda _op, _ev, er: er["errors"][0]["status"].update(http=True)),
+        ("unregistered-command-rejection", "CQRS-ERROR-001",
+         lambda op, _ev, _er: op["commands"][0]["rejects"].append("MRG-UNKNOWN-001")),
+    )
+    rejected = [expect_rejected(n, c, operations, events, errors, m) for n, c, m in cases]
     return {
         "schema": "wellmanifest.cqrs-conformance/v1",
         "ok": True,
