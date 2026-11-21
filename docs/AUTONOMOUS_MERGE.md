@@ -66,10 +66,26 @@ The full catalogue of merge events and their autonomous resolutions is in
 
 Six conditions, in the order they fail:
 
-1. **The protected registry enables the repository.** Its one profile names
-   the allowed base branches, exact required check contexts and
-   `scheduled_scan=true`. A repository without a reviewed profile is never
-   scanned — by design, so that adding one is an explicit act.
+1. **The protected registry enables the repository.** A repository resolves its
+   allowed base branches, exact required check contexts, and scheduled-scan flag
+   from the digest-bound protected registry using three deterministic tiers (in
+   precedence order):
+   - an **explicit repository override** (`repositories.<owner>/<repo>`), which
+     retains exact custom checks, merge method, and (when the owner policy sets
+     `respect_repository_scan=true`) explicit scan opt-outs;
+   - an **enrolled account policy** (`accounts.<owner>`), which covers every
+     non-fork, non-archived repository under that owner without per-repository
+     registry edits;
+   - a **named account group** (`account_groups.<group>`), which binds one
+     bounded default policy to a sorted list of enrolled owner accounts so new
+     repositories under any listed owner inherit admission automatically without
+     duplicating per-account boilerplate or contending on `repositories`.
+
+   An owner may belong to at most one account policy (`accounts` and
+   `account_groups` are strictly disjoint; ambiguous overlap fails closed).
+   Unlisted owners, forks (unless `include_forks=true`), and archived/disabled
+   repositories remain rejected fail-closed (`REPOSITORY_NOT_ENROLLED`), and
+   target pull requests still grant zero merge or check authority.
 2. **The scheduled plan and runtime policy are the same projection.**
    `plan-direct-scan` generates the matrix from the registry; each repository
    leg exports its scan config from those same protected bytes and verifies the
@@ -118,9 +134,11 @@ the target ruleset decides what its protected branch accepts.
 
 For each repository that should merge autonomously:
 
-- [ ] one protected registry profile with `scheduled_scan=true`, the allowed
-      base and the **exact** check names the target workflow publishes, verified
-      against the repository's own required-checks contract rather than copied;
+- [ ] protected registry admission via an explicit repository profile, an
+      enrolled `accounts.<owner>` policy, or a named `account_groups.<group>`
+      membership naming the allowed base and the **exact** required check
+      contexts verified against the repository's CI/OneDev contract (never a
+      weakened subset);
 - [ ] Validator App installation on the target repository, plus dependency-read
       access to `subactor/subllm`;
 - [ ] branch naming that yields a ticket (`ticket/NNN-…`);

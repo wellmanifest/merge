@@ -1,0 +1,78 @@
+{
+  "schema": "new-project.intent/v3",
+  "ticket": "ticket-018",
+  "summary": "Standardize account-scoped and account-group Validator registry admission",
+  "workstream": "integration",
+  "classification": {
+    "kind": "FEATURE",
+    "priority": "P2",
+    "origin": "requested"
+  },
+  "allowedPaths": [
+    "project/ticket-018/**",
+    "TODO.md",
+    "project/TICKETS.md",
+    "docs/AUTONOMOUS_MERGE.md",
+    "docs/README.md",
+    "docs/decisions/account-scoped-registry-admission.md"
+  ],
+  "forbiddenPaths": [
+    "project/ticket-*/user-*.md"
+  ],
+  "stacks": [],
+  "dependsOn": [],
+  "conflictsWith": [],
+  "integrationTicket": null,
+  "delivery": {
+    "targetBranch": "main",
+    "acceptedBaseSha": "04d5c4839277063c86bec2a40f71a4d8791c91f4",
+    "outcome": "Document protected account-scoped and account-group default Validator registry admission in docs/AUTONOMOUS_MERGE.md, record the decision in docs/decisions/account-scoped-registry-admission.md, and index it in docs/README.md without weakening MRG-MERGE-001 or fail-closed check requirements.",
+    "complexity": "S",
+    "estimatedMinutes": 25,
+    "budgets": {
+      "maxImplementationFiles": 3,
+      "maxAffectedComponents": 1,
+      "maxPublicInterfaceChanges": 0,
+      "maxRuntimeDependencies": 0
+    },
+    "runtimeDependencies": [],
+    "nonGoals": [
+      "Weakening MRG-MERGE-001 or allowing interactive-agent or owner self-merge.",
+      "Allowing target repositories or pull requests to declare their own merge authority or required checks."
+    ],
+    "architecture": {
+      "status": "accepted",
+      "decision": "Keep Validator-only merge and digest-bound protected registry authority while standardizing three deterministic resolution tiers: explicit repository override > explicit account policy > named account_groups default policy, with disjoint owner membership and explicit opt-out preservation.",
+      "components": [
+        {
+          "name": "merge-standard-docs",
+          "paths": [
+            "docs/AUTONOMOUS_MERGE.md",
+            "docs/README.md",
+            "docs/decisions/account-scoped-registry-admission.md"
+          ]
+        }
+      ],
+      "responsibilityChanges": false,
+      "interfaceChanges": [],
+      "dataChanges": [],
+      "ui": {
+        "impact": "none",
+        "states": [],
+        "evidence": []
+      },
+      "rollback": "git revert"
+    },
+    "validation": [
+      {
+        "criterion": "AC-03",
+        "commands": [
+          "python3 standard/conformance.py",
+          "python3 standard/cqrs_conformance.py",
+          "./project/governance-check.sh --actor agent"
+        ],
+        "evidence": "Standard conformance, CQRS conformance, and repository governance check exit 0 with 0 errors."
+      }
+    ]
+  }
+}
