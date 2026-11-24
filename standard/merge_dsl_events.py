@@ -15,6 +15,7 @@ from merge_contracts import (
     EVENTS_PATH,
     EVIDENCE_KINDS,
     MERGE_PRECONDITIONS,
+    OWNER_OVERRIDE_MARKERS,
     RULES_PATH,
     ContractError,
     digest,
@@ -22,7 +23,7 @@ from merge_contracts import (
     reject_no_symlink,
 )
 
-EVENT_ACTORS = {"INTERACTIVE_AGENT", "ONEDEV_AGENT", "VALIDATOR_AGENT"}
+EVENT_ACTORS = {"INTERACTIVE_AGENT", "ONEDEV_AGENT", "VALIDATOR_AGENT", "OWNER"}
 EVENT_STATES = {
     "DRAFT",
     "AWAITING_CHECKS",
@@ -95,7 +96,7 @@ def facts_for(
     }
     observed = {i["observation"] for i in cited if i["evidenceKind"] == "gate-outcome"}
     positive = merge_gate_markers(cited)
-    for name in MERGE_PRECONDITIONS:
+    for name in (*MERGE_PRECONDITIONS, *OWNER_OVERRIDE_MARKERS):
         facts[f"FACT_{dsl_name(name)}"] = boolean(name in positive)
     facts["FACT_REQUIRED_CHECKS_NOT_RUN"] = boolean(
         any(CHECKS_NOT_RUN in text for text in observed)
@@ -174,12 +175,14 @@ def validate_event_matrix() -> dict[str, Any]:
             raise ContractError("MRG-CONTRACT-001", f"event {event} names an undeclared actor")
         if fields["NOTIFY"] not in {"NONE", "OWNER"}:
             raise ContractError("MRG-CONTRACT-001", f"event {event} names an undeclared notice")
-        if fields["NEXT"] == "MERGED" and fields["ACTOR"] != "VALIDATOR_AGENT":
-            raise ContractError("MRG-CONTRACT-001", f"event {event} lets non-Validator merge")
+        if fields["NEXT"] == "MERGED" and fields["ACTOR"] not in {"VALIDATOR_AGENT", "OWNER"}:
+            raise ContractError("MRG-CONTRACT-001", f"event {event} lets non-Validator agent merge")
         priorities[event] = int(fields["PRIORITY"] or "0")
         facts = (
             {"FACT_PROTECTED_MERGE_RECEIPT_MATCHES_BRANCH": "TRUE"}
             if event == "ORPHAN_BRANCH"
+            else {"FACT_AUTONOMY_DEGRADED": "TRUE"}
+            if event == "AUTONOMY_DEGRADED_MANUAL_OVERRIDE"
             else None
         )
         values = evaluate_events(env_dsl, document, merged, event, facts)
@@ -197,6 +200,8 @@ def validate_event_matrix() -> dict[str, Any]:
         raise ContractError("MRG-CONTRACT-001", "an undeclared event must fail closed")
     if evaluate_events(env_dsl, document, merged, "ORPHAN_BRANCH").get("EVENT_RESOLVED_CONDITION") is not False:
         raise ContractError("MRG-CONTRACT-001", "merged-branch cleanup requires merge receipt")
+    if evaluate_events(env_dsl, document, merged, "AUTONOMY_DEGRADED_MANUAL_OVERRIDE").get("EVENT_RESOLVED_CONDITION") is not False:
+        raise ContractError("MRG-CONTRACT-001", "owner override requires degraded-autonomy fact")
     contradicted = evaluate_events(
         env_dsl,
         document,
@@ -207,13 +212,17 @@ def validate_event_matrix() -> dict[str, Any]:
     if contradicted.get("EVENT_RESOLVED_CONDITION") is not False:
         raise ContractError("MRG-CONTRACT-001", "closed-unmerged conflicts with merge receipt")
 
-    sample_event = events[0]
+    sample_event = "BYPASS_REQUESTED"
     mutations = {
         "interactive-agent-reaches-merged": {
             f"EVENT_{sample_event}_ACTOR": "INTERACTIVE_AGENT",
             f"EVENT_{sample_event}_NEXT": "MERGED",
         },
-        "owner-as-actor": {f"EVENT_{sample_event}_ACTOR": "OWNER"},
+        "onedev-agent-reaches-merged": {
+            f"EVENT_{sample_event}_ACTOR": "ONEDEV_AGENT",
+            f"EVENT_{sample_event}_NEXT": "MERGED",
+        },
+        "owner-as-routine-actor": {f"EVENT_{sample_event}_ACTOR": "OWNER"},
         "non-autonomous-resolution": {f"EVENT_{sample_event}_AUTONOMOUS": "FALSE"},
     }
     rejected_mutations: list[str] = []
@@ -227,6 +236,9 @@ def validate_event_matrix() -> dict[str, Any]:
         },
         "close-without-owner-decision": {"EVENT_CLOSED_UNMERGED_PR_NEXT": "CLOSED"},
         "prune-without-recovery-receipt": {"EVENT_ORPHAN_BRANCH_ACTION": "PRUNE_MERGED_BRANCH"},
+        "revert-owner-manual-merge": {
+            "EVENT_OWNER_MANUAL_MERGE_OBSERVED_ACTION": "REVERT_MANUAL_MERGE"
+        },
     }.items():
         if evaluate_events(env_dsl, document, {**merged, **change}, "CLOSED_UNMERGED_PR").get("EVENT_RESOLVED_CONDITION") is not False:
             raise AssertionError(f"the event matrix accepted {case}")

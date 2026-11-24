@@ -8,33 +8,61 @@ gate can still sit open.
 
 | Role | May do | May never do |
 | --- | --- | --- |
-| Interactive agent | gather evidence, record a decision, open the pull request, request an autonomous merge | execute a merge, approve its own work, approve through another account or reviewer profile, bypass a ruleset (`--admin`, UI "bypass rules") |
-| Validator identity | validate at exact head, approve, merge, retire a branch with a protected receipt | invent authority the standing policy did not grant |
-| Owner | set policy and resolve intent outside the agent merge workflow | act as the Validator identity in an agent decision |
+| Interactive agent | gather evidence, record a decision, open the pull request, request an autonomous merge | execute a merge, approve its own work, approve through another account or reviewer profile, bypass a ruleset (`--admin`, UI "bypass rules"), impersonate Owner |
+| Validator identity | validate at exact head, approve, merge, retire a branch with a protected receipt | invent authority the standing policy did not grant, waive `checks-not-run` |
+| Owner | set policy, resolve intent, steer work manually, and execute direct manual merge when autonomy fails/stalls or on green PRs | turn an interactive agent into a Validator or authorize AI agent self-merge |
 
-The split is not a formality. An interactive agent runs under the identity that
-pushed the branch, so its approval would be a self-approval, and its merge would
-be an unreviewed write to a protected branch. Approving through a second
-account or browser profile does not change that: it is the same actor
-presenting itself as an independent reviewer. Sessions that try it should be
-stopped by their own permission boundary — that is the guardrail working, not a
-defect to route around.
+The split prevents AI agent self-approval while keeping the human repository
+owner in control. An interactive agent runs under the identity that pushed the
+branch, so its approval would be a self-approval, and its merge would be an
+unreviewed write to a protected branch. Approving through a second account or
+browser profile does not change that: it is the same agent presenting itself as
+an independent reviewer. Sessions that try it should be stopped by their own
+permission boundary — that is the guardrail working, not a defect to route
+around.
 
-`merge` therefore is not an action an interactive agent authorizes for itself.
-It authorizes `request-autonomous-merge`; the validator identity authorizes and
-performs `merge`. Green tests are necessary evidence for that merge, not a
-grant of authority to whoever observed them. An instruction from the owner to
-the interactive agent does not turn that agent into an independent Validator.
-The decision model rejects `merge` with `executor: owner` as well as with
-`executor: interactive-agent`.
+`merge` therefore is not an action an interactive agent authorizes for itself:
+it authorizes `request-autonomous-merge`, and the Validator identity performs
+autonomous `merge` after all six preconditions hold. When automation fails or
+degrades (`autonomy-degraded`), an authenticated human `owner` acting directly
+MAY exercise manual steering or manual `merge` (see below), whereas the model
+still rejects `merge` with `executor: interactive-agent`.
 
-This matches the normative rules: `RULE_MERGE_EXECUTOR_CONDITION` in
-`standard/merge-rules.env` and `MRG-MERGE-001` in `standard/conformance.py`.
-For a merge decision, preconditions are exact whitespace-separated status
-markers in a deterministic `gate-outcome` produced by `gate`. Free-text prose,
-negated assignments such as `required-checks-green=false`, and human claims
-do not satisfy a precondition. The protected Validator must still verify the
-real status source and bind the result to the current head and base.
+This matches `RULE_MERGE_EXECUTOR_CONDITION`,
+`RULE_MERGE_PRECONDITIONS_CONDITION`, and `RULE_CHECKS_NOT_RUN_CONDITION` in
+`standard/merge-rules.env`, plus `MRG-MERGE-001` in `standard/conformance.py`.
+Free-text prose, negated assignments such as `required-checks-green=false`, and
+unstructured claims do not satisfy deterministic preconditions; the Validator
+must verify real check status and exact head/base bindings before autonomous
+merge, and owner overrides must carry deterministic `autonomy-degraded` and
+`owner-manual-override` gate markers when checks/automation stalled.
+
+## Human manual control and autonomy failure override
+
+Autonomy is an assistive default, never a lock against the repository owner.
+
+- **Fallback on degraded autonomy**: When CI, local OneDev verification,
+  Validator reconciliation, rate-limit budgets, or controller pipelines fail,
+  stall, time out, or reject stale pull requests (`autonomy-degraded`), the
+  authenticated human owner retains full authority to steer work manually and
+  execute a direct manual merge on GitHub.
+- **Never revert human manual merges**: Automation, validators, and AI agents
+  MUST preserve commits merged directly by an authenticated human owner (`git`
+  ancestry is authoritative once merged by the owner). Do not automatically
+  revert, overwrite, or reject an already-merged PR merely because automated
+  Validator certification is missing; record the outcome distinctly as a
+  manual-owner override (`manual-owner-override`, event
+  `OWNER_MANUAL_MERGE_OBSERVED`) and retire owned clean worktrees/lifecycle
+  normally on verified ancestry.
+- **Strict boundary for AI agents**: This permission belongs strictly to the
+  authenticated human owner. Interactive and coding AI agents still may NEVER
+  run personal `gh pr merge`, self-approve, click UI merge buttons via CDP, use
+  `--admin` bypass, or claim owner identity.
+- **Owner-directed runtime continuation**: Separating Validator certification
+  from owner authority means a manual owner merge does not forge an automated
+  `Validator` proof receipt, yet explicit owner direction authorizes runtime
+  reconciliation, lifecycle cleanup, and follow-up work on top of the merged
+  `main`.
 
 ## Checks that never ran
 

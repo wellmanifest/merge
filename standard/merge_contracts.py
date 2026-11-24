@@ -22,8 +22,8 @@ ENV_DSL_PATH = ROOT / "env_dsl.py"
 
 ENV_DSL_SOURCE_REVISION = "1d5ed6c"
 ENV_DSL_DIGEST = "5bf2e2b0983f9bbe421278a2eb76f485a5fee4c10cd820a19bfd5d1ac6e2dc24"
-RULES_DIGEST = "214bbcea8cf7e9d3951864a3423f92eed149394622cbe85fcc575e597f2c470a"
-SCHEMA_DIGEST = "0a122f0c003e4389fc954ae9f5a38dad7e93804b6056bcefe75f97203795a23a"
+RULES_DIGEST = "da8c3cc4847c536b11a562fe456b556a21a9b62b2c35609e640153c189f3c313"
+SCHEMA_DIGEST = "98f4820dd4b1dde0d6c8f4f748406dec82f292be6ee7c4350e9ceccc60d9c06e"
 GRAMMAR_DIGEST = "8e3aa2cb41ed435a503ae656374e5acd1e202876f9a0dd430d2f64e5b478cd8f"
 BINDINGS_DIGEST = "d20b43eafac91d7ace8d4b126ca8838b0b33e9d68f17d84f4a0a010ecac48abe"
 SCHEMA_FAMILY = "wellmanifest.merge-decision/v1"
@@ -71,6 +71,7 @@ MERGE_PRECONDITIONS = (
     "in-scan-matrix", "in-scan-config", "ticket-derivable",
     "required-checks-green", "approved-at-exact-head", "standing-merge-policy",
 )
+OWNER_OVERRIDE_MARKERS = ("autonomy-degraded", "owner-manual-override")
 CHECKS_NOT_RUN = "required-checks-not-run"
 DESTRUCTIVE_ACTIONS = {"delete-branch", "discard-worktree", "rebuild-history"}
 EFFECT_FREE_ACTIONS = {"record-backlog", "no-action"}
@@ -217,7 +218,7 @@ def match(name: str, value: Any) -> str:
 
 
 def merge_gate_markers(cited: list[dict[str, Any]]) -> set[str]:
-    allowed = set(MERGE_PRECONDITIONS)
+    allowed = set(MERGE_PRECONDITIONS) | set(OWNER_OVERRIDE_MARKERS)
     markers: set[str] = set()
     for item in cited:
         if (
@@ -377,18 +378,15 @@ def validate_decision(
     if doc["executor"] not in EXECUTORS:
         raise ContractError("MRG-DECISION-001", "unknown executor")
     if "merge" in actions:
-        if doc["executor"] != "automated-validator":
-            raise ContractError(
-                "MRG-MERGE-001", "only the independent Validator may authorize merge"
-            )
+        if doc["executor"] not in {"automated-validator", "owner"}:
+            raise ContractError("MRG-MERGE-001", "interactive-agent may never authorize merge")
+        markers = merge_gate_markers(cited)
+        override = doc["executor"] == "owner" and set(OWNER_OVERRIDE_MARKERS) <= markers
         gate_outcomes = [i for i in cited if i["evidenceKind"] == "gate-outcome"]
-        if any(CHECKS_NOT_RUN in i["observation"] for i in gate_outcomes):
+        if not override and any(CHECKS_NOT_RUN in i["observation"] for i in gate_outcomes):
             raise ContractError("MRG-MERGE-001", "a required check that never ran is not green")
-        if merge_gate_markers(cited) != set(MERGE_PRECONDITIONS):
-            raise ContractError(
-                "MRG-MERGE-001",
-                "a Validator merge must evidence every precondition it depends on",
-            )
+        if not override and not (set(MERGE_PRECONDITIONS) <= markers):
+            raise ContractError("MRG-MERGE-001", "merge requires preconditions or owner override")
     destructive = bool(set(actions) & DESTRUCTIVE_ACTIONS)
     if doc["destructive"] is not destructive:
         raise ContractError("MRG-DECISION-001", "the destructive flag disagrees with actions")
