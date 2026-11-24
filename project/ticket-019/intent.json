@@ -1,0 +1,97 @@
+{
+  "schema": "new-project.intent/v3",
+  "ticket": "ticket-019",
+  "summary": "Allow human owner manual merge and override on autonomy failure",
+  "workstream": "integration",
+  "classification": {
+    "kind": "FEATURE",
+    "priority": "P1",
+    "origin": "requested"
+  },
+  "allowedPaths": [
+    "project/ticket-019/**",
+    "TODO.md",
+    "project/TICKETS.md",
+    "docs/**",
+    "error/**",
+    "standard/**"
+  ],
+  "forbiddenPaths": [
+    "project/ticket-*/user-*.md"
+  ],
+  "stacks": [],
+  "dependsOn": [],
+  "conflictsWith": [],
+  "integrationTicket": null,
+  "delivery": {
+    "targetBranch": "main",
+    "acceptedBaseSha": "a0cefaf5b9a184cd993d23c8d0d9ad50ec419624",
+    "outcome": "Allow authenticated human repository owners to perform manual steering and direct manual merges with autonomy-degraded override while keeping interactive AI agents strictly prohibited from self-approval or merge, and record preservation of manual owner merges.",
+    "complexity": "L",
+    "estimatedMinutes": 45,
+    "budgets": {
+      "maxImplementationFiles": 12,
+      "maxAffectedComponents": 3,
+      "maxPublicInterfaceChanges": 0,
+      "maxRuntimeDependencies": 0
+    },
+    "runtimeDependencies": [],
+    "nonGoals": [
+      "Allowing interactive or coding AI agents to self-approve, run personal gh pr merge, or impersonate the human owner.",
+      "Reverting earlier personal owner merges."
+    ],
+    "architecture": {
+      "status": "accepted",
+      "decision": "Extend merge-rules.env, merge-events.env, merge_contracts.py, merge_dsl_events.py, and merge_adversarial.py so executor=owner is admissible for merge with green preconditions or explicit autonomy-degraded + owner-manual-override evidence, add AUTONOMY_DEGRADED_MANUAL_OVERRIDE and OWNER_MANUAL_MERGE_OBSERVED events, and document the boundary in AUTONOMOUS_MERGE.md, MERGE_EVENTS.md, MRG-MERGE-001.md, and docs/decisions/human-manual-override-on-autonomy-failure.md.",
+      "components": [
+        {
+          "name": "merge-standard-rules",
+          "paths": [
+            "standard/merge-rules.env",
+            "standard/merge-events.env",
+            "standard/merge-decision.schema.json"
+          ]
+        },
+        {
+          "name": "merge-standard-conformance",
+          "paths": [
+            "standard/merge_contracts.py",
+            "standard/merge_dsl_events.py",
+            "standard/merge_adversarial.py"
+          ]
+        },
+        {
+          "name": "merge-standard-docs",
+          "paths": [
+            "docs/AUTONOMOUS_MERGE.md",
+            "docs/MERGE_EVENTS.md",
+            "docs/README.md",
+            "docs/decisions/human-manual-override-on-autonomy-failure.md",
+            "error/MRG-MERGE-001.md"
+          ]
+        }
+      ],
+      "responsibilityChanges": false,
+      "interfaceChanges": [],
+      "dataChanges": [],
+      "ui": {
+        "impact": "none",
+        "states": [],
+        "evidence": []
+      },
+      "rollback": "git revert"
+    },
+    "validation": [
+      {
+        "criterion": "AC-03",
+        "commands": [
+          "python3 standard/conformance.py --all",
+          "python3 standard/cqrs_conformance.py",
+          "./project/governance-check.sh --actor agent",
+          "wellman check"
+        ],
+        "evidence": "Conformance, CQRS conformance, governance check, and wellman check exit 0 with 0 errors."
+      }
+    ]
+  }
+}

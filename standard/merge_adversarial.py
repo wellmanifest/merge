@@ -331,6 +331,9 @@ def run_adversarial_and_parity(
         {"evidenceId": "evidence:local-tests", "evidenceKind": "gate-outcome",
          "producer": "gate", "command": "python3 -m pytest -q",
          "observation": "45 passed at the exact head", "deterministic": True},
+        {"evidenceId": "evidence:autonomy-override", "evidenceKind": "gate-outcome",
+         "producer": "gate", "command": "validator status --autonomy-degraded",
+         "observation": "autonomy-degraded owner-manual-override", "deterministic": True},
     ):
         rec = {"schema": SCHEMA_FAMILY, "kind": "evidence",
                "candidateId": candidate["candidateId"], "observedAt": "2026-09-24T12:00:00Z",
@@ -352,12 +355,19 @@ def run_adversarial_and_parity(
          merge_on("automated-validator",
                   ["evidence:hosted-not-run", "evidence:claimed-preconditions",
                    "evidence:local-tests", "evidence:history"])),
+        ("validator-merge-cannot-use-owner-override",
+         merge_on("automated-validator",
+                  ["evidence:hosted-not-run", "evidence:autonomy-override", "evidence:history"])),
+        ("interactive-agent-cannot-use-owner-override",
+         merge_on("interactive-agent",
+                  ["evidence:claimed-preconditions", "evidence:autonomy-override",
+                   "evidence:history"])),
         ("owner-merge-on-checks-not-run-with-local-tests",
          merge_on("owner",
                   ["evidence:hosted-not-run", "evidence:claimed-preconditions",
                    "evidence:local-tests", "evidence:history"])),
-        ("owner-merge-with-all-preconditions",
-         merge_on("owner", ["evidence:claimed-preconditions", "evidence:history"])),
+        ("owner-merge-without-preconditions-or-override",
+         merge_on("owner", ["evidence:local-tests", "evidence:history"])),
     ):
         rejected.append(
             expect_rejected(case, "MRG-MERGE-001",
@@ -378,6 +388,18 @@ def run_adversarial_and_parity(
     if not dsl_admissible(candidate, validator_ok, not_run_ev):
         raise AssertionError("the rule equations rejected Validator merge with all preconditions")
     parity.append("validator-merge-with-all-preconditions")
+
+    for positive_case, ids in (
+        ("owner-merge-with-all-preconditions", ["evidence:claimed-preconditions", "evidence:history"]),
+        ("owner-merge-on-autonomy-degraded-override",
+         ["evidence:hosted-not-run", "evidence:autonomy-override", "evidence:history"]),
+    ):
+        owner_ok = copy.deepcopy(decision)
+        merge_on("owner", ids)(owner_ok)
+        validate_decision(owner_ok, candidate, not_run_ev)
+        if not dsl_admissible(candidate, owner_ok, not_run_ev):
+            raise AssertionError(f"the rule equations rejected {positive_case}")
+        parity.append(positive_case)
 
     for case, changes in (
         ("negated-check-marker",

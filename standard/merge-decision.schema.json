@@ -132,7 +132,7 @@
           "items": { "enum": ["open-pull-request", "request-autonomous-merge", "merge", "rebuild-history", "delete-branch", "discard-worktree", "record-backlog", "no-action"] }
         },
         "executor": {
-          "description": "Who performs the authorized actions. Only the independent automated-validator may authorize `merge`; interactive-agent and owner remain valid for non-merge actions.",
+          "description": "Who performs the authorized actions. automated-validator is the default merge executor; an authenticated human owner may execute manual merge with full preconditions or declared autonomy-degraded override; interactive-agent may never authorize merge.",
           "enum": ["interactive-agent", "automated-validator", "owner"]
         },
         "destructive": { "type": "boolean" },

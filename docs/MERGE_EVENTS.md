@@ -11,14 +11,18 @@ they diverge.
 | Actor | Identity | May |
 | --- | --- | --- |
 | `INTERACTIVE_AGENT` | the coding agent that pushed the ticket branch | change the ticket branch, open the pull request, request an autonomous merge, open enrollment tickets |
-| `ONEDEV_AGENT` | `subactor/onedev-agent` | verify the exact head merged with the current base (`onedev/local-verify`), consolidate duplicate or superseded tickets, retire merged work by lifecycle |
+| `ONEDEV_AGENT` | `subactor/onedev-agent` | verify the exact head merged with the current base (`onedev/local-verify`), consolidate duplicate or superseded tickets, retire merged work by lifecycle (including preserved owner manual merges) |
 | `VALIDATOR_AGENT` | `subactor/validator-agent` App identity | validate at the exact head, approve, merge |
+| `OWNER` | authenticated human repository owner | steer manually and execute direct manual merge on `AUTONOMY_DEGRADED_MANUAL_OVERRIDE` (agents never impersonate `OWNER`) |
 
-The owner is never an execution actor in this matrix. `NOTIFY=OWNER` is an
-out-of-band notice, not authority to delete or merge. For a closed unmerged PR,
-OneDev preserves the branch autonomously; discarding it later requires the
-owner's explicit decision after intent reconciliation. The interactive agent
-never merges and never asks a human whether to merge.
+`OWNER` acts only on `AUTONOMY_DEGRADED_MANUAL_OVERRIDE` when automation stalls
+or degrades; in all routine events `NOTIFY=OWNER` is an out-of-band notice, not
+permission for an agent to delete or merge. For a closed unmerged PR, OneDev
+preserves the branch autonomously; discarding it later requires the owner's
+explicit decision after intent reconciliation. The interactive agent never
+merges. When the owner executes a manual merge directly, `OWNER_MANUAL_MERGE_OBSERVED`
+preserves the merged commit (never auto-reverted), records the override, and
+retires owned lifecycle state normally.
 
 ## How to resolve
 
@@ -61,26 +65,29 @@ discard the unmerged work.
 | 34 | `HEAD_CHANGED` | The head moved while validation was running. | `VALIDATOR_AGENT` | `START_NEW_EXACT_HEAD_EPOCH` | `AWAITING_CHECKS` | `NONE` |
 | 32 | `BASE_ADVANCED` | The base branch advanced; the pull request still merges cleanly. | `VALIDATOR_AGENT` | `VERIFY_MERGE_RESULT_AGAINST_CURRENT_BASE` | `AWAITING_CHECKS` | `NONE` |
 | 24 | `VALIDATOR_UNAVAILABLE` | The Validator workflow cannot be dispatched or does not start. | `ONEDEV_AGENT` | `QUEUE_REDISPATCH_WITH_BACKOFF_AND_OPEN_INCIDENT` | `AWAITING_VALIDATOR` | `OWNER` |
+| 22 | `AUTONOMY_DEGRADED_MANUAL_OVERRIDE` | Autonomy failed, stalled, or timed out; authenticated human owner steers or merges manually with audit record. | `OWNER` | `MANUAL_STEERING_OR_MANUAL_MERGE_WITH_AUDIT_RECORD` | `MERGED` | `OWNER` |
 | 20 | `RATE_LIMITED` | GitHub API quota is exhausted for the scanning identity. | `VALIDATOR_AGENT` | `WAIT_RETRY_AFTER_THEN_RESCAN` | `AWAITING_VALIDATOR` | `NONE` |
 | 16 | `CLOSED_UNMERGED_PR` | A PR closed without merge still has its ticket branch; its intent needs reconciliation. | `ONEDEV_AGENT` | `PRESERVE_BRANCH_AND_RECONCILE_INTENT` | `AWAITING_OWNER_DECISION` | `OWNER` |
 | 15 | `ORPHAN_BRANCH` | A branch remains after a protected merge receipt identifies it. | `ONEDEV_AGENT` | `PRUNE_WITH_RECOVERY_RECEIPT` | `CLOSED` | `NONE` |
 | 12 | `LOCAL_VERIFY_GREEN` | `onedev/local-verify` is green on the exact head merged with the current base. | `VALIDATOR_AGENT` | `VALIDATE_APPROVE_AND_MERGE_EXACT_HEAD` | `MERGED` | `NONE` |
 | 10 | `CHECKS_GREEN` | Every required check passed at the exact head. | `VALIDATOR_AGENT` | `VALIDATE_APPROVE_AND_MERGE_EXACT_HEAD` | `MERGED` | `NONE` |
+| 6 | `OWNER_MANUAL_MERGE_OBSERVED` | A pull request was merged directly by an authenticated human owner; preserve history and retire lifecycle cleanly. | `ONEDEV_AGENT` | `PRESERVE_MANUAL_MERGE_RECORD_OVERRIDE_AND_RETIRE_LIFECYCLE` | `CLOSED` | `OWNER` |
 | 5 | `MERGED` | The merge is read back on the base branch. | `ONEDEV_AGENT` | `RELEASE_SCOPE_AND_RETIRE_WORKTREE_BY_LIFECYCLE` | `CLOSED` | `NONE` |
 
 ## Invariants
 
 The equations in `merge-events.env` prove, and conformance re-checks:
 
-- only `VALIDATOR_AGENT` leads to `MERGED`;
-- no event has the owner as its actor;
-- every resolution is autonomous;
+- neither `INTERACTIVE_AGENT` nor `ONEDEV_AGENT` ever reaches `MERGED`; only `VALIDATOR_AGENT` (autonomous) or `OWNER` (manual override when `FACT_AUTONOMY_DEGRADED` holds) leads to `MERGED`;
+- `OWNER` appears exclusively on `AUTONOMY_DEGRADED_MANUAL_OVERRIDE` (`AUTONOMOUS=FALSE`), while all routine resolutions remain autonomous;
 - every event routes exactly once and priorities are unique, so concurrent
   events are ordered deterministically;
-- an undeclared event is not resolved.
+- an undeclared event is not resolved;
 - an unmerged branch is preserved; merged-branch cleanup requires a matching
-  protected merge receipt and a recovery receipt.
+  protected merge receipt and a recovery receipt, and an owner manual merge is
+  preserved and retired without reverting.
 
 `merge-rules.env` keeps the decision-level rules: an interactive agent never
 authorizes `merge`, and a check that never ran (`required-checks-not-run`)
-is not green.
+is never green for `AUTOMATED_VALIDATOR` (only `OWNER` with declared
+`autonomy-degraded` and `owner-manual-override` markers may override it).
